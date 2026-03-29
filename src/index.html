@@ -1,0 +1,907 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+<!-- Force dark colour-scheme so Fire OS / Android forced-light mode can't override our CSS -->
+<meta name="color-scheme" content="dark"/>
+<title>Kappa Tracker</title>
+<link rel="stylesheet" href="styles.css"/>
+<link rel="stylesheet" href="styles-mobile.css"/>
+</head>
+<body>
+
+<!-- ── MOBILE HEADER (shown instead of #header on mobile) ── -->
+<div id="mobile-header">
+  <div id="mh-logo">κ</div>
+  <div id="mh-title">KAPPA TRACKER</div>
+  <div id="mh-stats">
+    <div id="mh-level">LVL —</div>
+    <div id="mh-progress">0%</div>
+    <!-- Tiny sync status dot — green when synced, gold when syncing -->
+    <span id="mh-sync-dot" title="Cloud sync status"
+      style="width:6px;height:6px;border-radius:50%;background:var(--green);opacity:0;transition:opacity .4s,background .4s;flex-shrink:0;"></span>
+  </div>
+</div>
+<div id="mobile-kappa-bar"><div class="kappa-fill" id="mob-kappa-fill" style="width:0%"></div></div>
+
+<!-- ── HEADER ── -->
+<div id="header">
+  <div class="logo">
+    <div class="logo-hex">κ</div>
+    <div>
+      <div class="logo-text">KAPPA TRACKER</div>
+      <div class="logo-sub">Escape from Tarkov</div>
+    </div>
+  </div>
+  <button onclick="openRaidPlanner()" style="background:var(--surface);border:1px solid var(--gold);color:var(--gold);font-family:'Rajdhani',sans-serif;font-weight:700;font-size:12px;letter-spacing:2px;padding:5px 14px;cursor:pointer;margin-right:8px;transition:all .15s;" onmouseover="this.style.background='rgba(212,175,55,.15)'" onmouseout="this.style.background='var(--surface)'">⚔ RAID PLANNER</button>
+  <button id="overlay-btn" onclick="if(window.electronAPI)window.electronAPI.toggleOverlay()" title="Toggle floating overlay window" style="background:var(--surface);border:1px solid var(--border2);color:var(--text2);font-family:'Rajdhani',sans-serif;font-weight:700;font-size:12px;letter-spacing:2px;padding:5px 14px;cursor:pointer;margin-right:12px;transition:all .15s;" onmouseover="this.style.borderColor='rgba(200,168,75,.4)';this.style.color='var(--gold)'" onmouseout="this.style.borderColor='var(--border2)';this.style.color='var(--text2)'">⧉ OVERLAY</button>
+  <!-- Live Game Status Badge -->
+  <div id="game-status-badge" title="Live game integration status" style="display:flex;align-items:center;gap:6px;margin-right:14px;padding:4px 10px;border:1px solid var(--border2);background:var(--surface2);cursor:default;">
+    <span id="game-status-dot" style="width:7px;height:7px;border-radius:50%;background:var(--text4);display:inline-block;flex-shrink:0;"></span>
+    <span id="game-status-text" style="font-family:'Share Tech Mono',monospace;font-size:9px;color:var(--text3);letter-spacing:1px;white-space:nowrap;">OFFLINE</span>
+  </div>
+  <!-- Hotkey Reminder — always visible, Overwolf requirement -->
+  <button id="header-hotkey-btn" onclick="toggleWindowHotkey()" title="Click to hide · Show again with this hotkey"
+    style="display:flex;align-items:center;gap:6px;background:var(--surface2);border:1px solid var(--border2);color:var(--text3);padding:4px 10px;cursor:pointer;margin-right:10px;font-family:'Share Tech Mono',monospace;font-size:9px;letter-spacing:1px;transition:all .15s;"
+    onmouseover="this.style.borderColor='rgba(200,168,75,.4)';this.style.color='var(--gold)'"
+    onmouseout="this.style.borderColor='var(--border2)';this.style.color='var(--text3)'">
+    <span style="font-size:10px;">⌨</span>
+    <span id="header-hotkey-label">Ctrl+Shift+K</span>
+  </button>
+  <div style="display:flex;align-items:center;margin-right:16px;">
+    <button id="faction-badge" class="faction-badge none" onclick="document.getElementById('faction-modal').classList.add('open')">NO FACTION</button>
+  </div>
+  <div class="header-right">
+    <div class="pmc-level" style="display:flex;align-items:center;gap:6px;">
+      <div>
+        <div class="pmc-lbl">PMC LVL</div>
+        <div class="pmc-val" id="h-level">—</div>
+      </div>
+      <div style="display:flex;flex-direction:column;gap:2px;">
+        <button onclick="adjustLevel(1)" style="background:var(--surface3);border:1px solid var(--border2);color:var(--gold);width:20px;height:18px;cursor:pointer;font-size:11px;line-height:1;padding:0;display:flex;align-items:center;justify-content:center;">▲</button>
+        <button onclick="adjustLevel(-1)" style="background:var(--surface3);border:1px solid var(--border2);color:var(--text2);width:20px;height:18px;cursor:pointer;font-size:11px;line-height:1;padding:0;display:flex;align-items:center;justify-content:center;">▼</button>
+      </div>
+    </div>
+    <div class="header-stats">
+      <div class="hstat"><div class="hstat-val" id="h-kd">0</div><div class="hstat-lbl">Kappa Done</div></div>
+      <div class="hstat"><div class="hstat-val" id="h-kt">—</div><div class="hstat-lbl">Kappa Total</div></div>
+      <div class="hstat"><div class="hstat-val" id="h-pct">0%</div><div class="hstat-lbl">Progress</div></div>
+      <div class="hstat"><div class="hstat-val" id="h-col">0/—</div><div class="hstat-lbl">Collector</div></div>
+    </div>
+  </div>
+</div>
+<div class="kappa-bar"><div class="kappa-fill" id="kappa-fill" style="width:0%"></div></div>
+
+<!-- ── TABS ── -->
+<div id="tabs">
+  <button class="tab-btn active" data-tab="dashboard">
+    <svg class="tab-icon" viewBox="0 0 16 16" fill="currentColor"><path d="M2 2h5v6H2zm7 0h5v3h-5zM9 7h5v7H9zM2 10h5v6H2z"/></svg>
+    HOME
+  </button>
+  <button class="tab-btn" data-tab="quests">
+    <svg class="tab-icon" viewBox="0 0 16 16" fill="currentColor"><path d="M2 3h12v1.5H2zm0 4h12v1.5H2zm0 4h8v1.5H2z"/></svg>
+    QUESTS <span class="tab-pill" id="tc-q">—</span>
+  </button>
+  <button class="tab-btn" data-tab="story">
+    <svg class="tab-icon" viewBox="0 0 16 16" fill="currentColor"><path d="M2 1h12v2H2zm0 4h9v2H2zm0 4h12v2H2zm0 4h7v2H2z"/></svg>
+    STORY <span class="tab-pill" id="tc-story">—</span>
+  </button>
+  <button class="tab-btn" data-tab="collector">
+    <svg class="tab-icon" viewBox="0 0 16 16" fill="currentColor"><path d="M8 1l1.8 3.6L14 5.4l-3 2.9.7 4.1L8 10.4l-3.7 2 .7-4.1-3-2.9 4.2-.8z"/></svg>
+    COLLECTOR <span class="tab-pill" id="tc-col">0/—</span>
+  </button>
+  <button class="tab-btn" data-tab="hideout">
+    <svg class="tab-icon" viewBox="0 0 16 16" fill="currentColor"><path d="M8 1L1 7h2v8h4v-4h2v4h4V7h2z"/></svg>
+    HIDEOUT <span class="tab-pill" id="tc-h">—</span>
+  </button>
+  <button class="tab-btn" data-tab="items">
+    <svg class="tab-icon" viewBox="0 0 16 16" fill="currentColor"><path d="M3 2h10l1 3H2zm0 4h10v8H3zm2 2v2h2V8zm4 0v2h2V8z"/></svg>
+    ITEMS TO KEEP
+  </button>
+  <button class="tab-btn" data-tab="ammo">
+    <svg class="tab-icon" viewBox="0 0 16 16" fill="currentColor"><path d="M7 1h2v6l1 1v6H6V8l1-1zm-1 9h4v1H6zm0 2h4v1H6z"/></svg>
+    AMMO CHART
+  </button>
+  <button class="tab-btn" data-tab="maps">
+    <svg class="tab-icon" viewBox="0 0 16 16" fill="currentColor"><path d="M1 2l4 1.5 6-2 4 1.5V14l-4-1.5-6 2-4-1.5zm4 2.5v8l6-2v-8z"/></svg>
+    MAPS
+  </button>
+  <button class="tab-btn" data-tab="settings" style="margin-left:auto;">
+    <svg class="tab-icon" viewBox="0 0 24 24" fill="currentColor"><path d="M19.14 12.94c.04-.3.06-.61.06-.94s-.02-.64-.07-.94l2.03-1.58a.49.49 0 00.12-.61l-1.92-3.32a.49.49 0 00-.59-.22l-2.39.96a7 7 0 00-1.62-.94l-.36-2.54A.48.48 0 0014 3h-3.84a.48.48 0 00-.48.41l-.36 2.54a7.4 7.4 0 00-1.62.94l-2.39-.96a.48.48 0 00-.59.22L2.8 9.47a.47.47 0 00.12.61l2.03 1.58a7.3 7.3 0 00-.07.94c0 .32.02.64.07.94l-2.03 1.58a.47.47 0 00-.12.61l1.92 3.32c.12.22.37.3.59.22l2.39-.96c.5.38 1.05.69 1.62.94l.36 2.54c.06.27.3.46.58.46h3.84c.27 0 .52-.19.57-.46l.36-2.54a7.4 7.4 0 001.62-.94l2.39.96c.22.08.47 0 .59-.22l1.92-3.32a.47.47 0 00-.12-.61l-2.01-1.58zM12 15.6A3.6 3.6 0 1112 8.4a3.6 3.6 0 010 7.2z"/></svg>
+    SETTINGS
+  </button>
+</div>
+
+<!-- ── APP BODY ── -->
+<div id="app">
+
+  <!-- ════════ DASHBOARD ════════ -->
+  <div class="tab-panel active" id="panel-dashboard">
+    <div class="main-area">
+      <div class="dash-scroll" id="dash-scroll">
+        <!-- Stat cards -->
+        <div class="stat-grid" id="dash-stat-grid">
+          <div class="stat-card s-kappa" onclick="switchTab('quests')">
+            <div class="sc-card-icon">📋</div>
+            <div class="sc-val"><span id="ds-kd">0</span><span> / <span id="ds-kt">—</span></span></div>
+            <div class="sc-lbl">Kappa Quests</div>
+            <div class="sc-sub" id="ds-kpct">0% complete</div>
+            <div class="sc-bar"><div class="sc-fill" id="ds-kbar" style="width:0%;background:var(--gold);"></div></div>
+          </div>
+          <div class="stat-card s-col" onclick="switchTab('collector')">
+            <div class="sc-card-icon">⭐</div>
+            <div class="sc-val"><span id="ds-cd">0</span><span> / <span id="ds-ct">—</span></span></div>
+            <div class="sc-lbl">Collector Items</div>
+            <div class="sc-sub" id="ds-cpct">0% found</div>
+            <div class="sc-bar"><div class="sc-fill" id="ds-cbar" style="width:0%;background:var(--green);"></div></div>
+          </div>
+          <div class="stat-card s-hide" onclick="switchTab('hideout')">
+            <div class="sc-card-icon">🏠</div>
+            <div class="sc-val"><span id="ds-hd">0</span><span> / <span id="ds-ht">—</span></span></div>
+            <div class="sc-lbl">Hideout Items</div>
+            <div class="sc-sub" id="ds-hpct">0% gathered</div>
+            <div class="sc-bar"><div class="sc-fill" id="ds-hbar" style="width:0%;background:var(--blue);"></div></div>
+          </div>
+          <div class="stat-card s-story" onclick="switchTab('story')">
+            <div class="sc-card-icon">📖</div>
+            <div class="sc-val"><span id="ds-sd">0</span><span> / <span id="ds-st">—</span></span></div>
+            <div class="sc-lbl">Story Progress</div>
+            <div class="sc-sub" id="ds-spath">Pick an ending</div>
+            <div class="sc-bar"><div class="sc-fill" id="ds-sbar" style="width:0%;background:var(--purple);"></div></div>
+          </div>
+        </div>
+
+        <!-- PMC level input -->
+        <div style="display:flex;align-items:center;gap:12px;">
+          <div class="trader-grid-title" style="margin:0;flex:1;">PMC Level</div>
+          <div style="display:flex;align-items:center;gap:8px;">
+            <button onclick="adjustLevel(-1)" style="background:var(--surface2);border:1px solid var(--border);color:var(--text2);width:28px;height:28px;cursor:pointer;font-size:16px;display:flex;align-items:center;justify-content:center;">−</button>
+            <span id="level-display" style="font-family:'Share Tech Mono',monospace;font-size:18px;color:var(--gold);min-width:36px;text-align:center;">1</span>
+            <button onclick="adjustLevel(1)" style="background:var(--surface2);border:1px solid var(--border);color:var(--text2);width:28px;height:28px;cursor:pointer;font-size:16px;display:flex;align-items:center;justify-content:center;">+</button>
+          </div>
+        </div>
+
+        <!-- Trader grid -->
+        <div>
+          <div class="trader-grid-title">Traders</div>
+          <div class="trader-portrait-grid" id="dash-trader-grid"></div>
+        </div>
+
+        <!-- Two panels -->
+        <div class="two-col">
+          <div class="info-panel">
+            <div class="info-panel-hdr">
+              Recently Completed
+              <span class="info-panel-hdr-right" onclick="switchTab('quests')">View All →</span>
+            </div>
+            <div id="dash-recent"></div>
+          </div>
+          <div class="info-panel">
+            <div class="info-panel-hdr">
+              Up Next — Available Now
+              <span class="info-panel-hdr-right" id="dash-avail-count"></span>
+            </div>
+            <div id="dash-next"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ════════ QUESTS ════════ -->
+  <div class="tab-panel" id="panel-quests">
+    <div class="sidebar" id="quest-sidebar">
+      <div class="sidebar-section">
+        <div class="s-label">Search</div>
+        <div class="search-wrap">
+          <span class="search-ico">⌕</span>
+          <input class="search-input" id="q-search" type="text" placeholder="Quest name…"/>
+        </div>
+      </div>
+      <div class="sidebar-section" style="padding-bottom:0;">
+        <div class="s-label">Trader</div>
+        <div class="trader-scroll" id="trader-list"></div>
+      </div>
+      <div class="sidebar-section">
+        <div class="s-label">Filter</div>
+        <div class="filter-list">
+          <button class="f-btn active" data-qf="all">All Quests<span class="f-count" id="qf-all">—</span></button>
+          <button class="f-btn" data-qf="kappa">Kappa Only<span class="f-count" id="qf-kappa">—</span></button>
+          <button class="f-btn" data-qf="available">Available Now<span class="f-count" id="qf-avail">—</span></button>
+          <button class="f-btn" data-qf="remaining">Incomplete<span class="f-count" id="qf-rem">—</span></button>
+          <button class="f-btn" data-qf="done">Completed<span class="f-count" id="qf-done">—</span></button>
+        </div>
+      </div>
+    </div>
+    <div class="main-area">
+      <!-- Mobile-only quick filter chips (sidebar is hidden on mobile) -->
+      <div id="mob-quest-filters">
+        <button class="mob-filter-chip active" data-qf="kappa">KAPPA</button>
+        <button class="mob-filter-chip" data-qf="all">ALL</button>
+        <button class="mob-filter-chip" data-qf="available">AVAILABLE</button>
+        <button class="mob-filter-chip" data-qf="incomplete">INCOMPLETE</button>
+        <button class="mob-filter-chip" data-qf="done">DONE</button>
+      </div>
+      <div class="toolbar">
+        <div class="toolbar-top">
+          <span class="tb-lbl">Group</span>
+          <button class="sort-btn active" data-qs="trader">Trader</button>
+          <button class="sort-btn" data-qs="map">Map</button>
+          <button class="sort-btn" data-qs="alpha">A–Z</button>
+          <button class="sort-btn" data-qs="status">Status</button>
+          <div class="tb-right">
+            <button class="btn-sm" id="q-export">Export</button>
+            <button class="btn-sm" id="q-import">Import</button>
+            <input type="file" id="q-import-file" accept=".json" style="display:none"/>
+          </div>
+        </div>
+        <div class="toolbar-map">
+          <span class="tb-lbl" style="white-space:nowrap;">Map</span>
+          <div class="map-chip-row" id="map-filter-list">
+            <button class="map-chip active" data-qmap="">All</button>
+          </div>
+        </div>
+      </div>
+      <div class="quest-list" id="quest-list">
+        <div class="state-box"><div class="spinner"></div><div class="state-title">Loading Quests</div><div class="state-sub">Fetching from tarkov.dev…</div></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ════════ COLLECTOR ════════ -->
+  <div class="tab-panel" id="panel-collector">
+    <div class="main-area">
+      <div class="collector-header">
+        <div class="col-progress">
+          <div class="col-prog-text" id="col-text">0 / 40 streamer items found</div>
+          <div class="col-prog-bar"><div class="col-prog-fill" id="col-fill" style="width:0%"></div></div>
+        </div>
+        <button class="btn-sm btn-danger" id="col-wipe">Reset</button>
+      </div>
+      <div class="collector-grid" id="collector-grid">
+        <div class="state-box"><div class="spinner"></div></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ════════ HIDEOUT ════════ -->
+  <div class="tab-panel" id="panel-hideout">
+    <div class="hideout-layout">
+      <div class="hideout-sidebar" id="hideout-stations">
+        <div class="state-box" style="padding:20px"><div class="spinner"></div></div>
+      </div>
+      <div class="hideout-main" id="hideout-main">
+        <div class="state-box">
+          <div class="state-icon">🏠</div>
+          <div class="state-title">Select a Station</div>
+          <div class="state-sub">Choose a hideout station from the left to view its upgrade requirements.</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ════════ ITEMS TO KEEP ════════ -->
+  <div class="tab-panel" id="panel-items">
+    <div class="raid-layout">
+      <div class="raid-main" id="items-main">
+        <div class="state-box"><div class="spinner"></div><div class="state-title">Loading Quest Items</div><div class="state-sub">Calculating all items needed for active quests…</div></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ════════ AMMO ════════ -->
+  <div class="tab-panel" id="panel-ammo">
+    <div class="ammo-layout">
+      <div class="ammo-controls">
+        <input class="ammo-search-input" id="ammo-search" type="text" placeholder="Search ammo…" style="min-width:200px;"/>
+        <span class="tb-lbl" style="margin-left:8px;">Click a category to collapse · Click headers to sort</span>
+      </div>
+      <div class="ammo-table-wrap" id="ammo-wrap">
+        <div class="state-box"><div class="spinner"></div><div class="state-title">Loading Ammo Data</div></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ════════ MAPS ════════ -->
+  <div class="tab-panel" id="panel-maps">
+    <div class="main-area">
+      <div class="maps-coming">
+        <div style="font-family:'Rajdhani',sans-serif;font-size:20px;font-weight:700;letter-spacing:3px;color:var(--gold);">SELECT MAP</div>
+        <div style="font-size:13px;color:var(--text3);margin-bottom:16px;">Interactive maps with quest markers and extract points — powered by tarkov.dev SVG maps</div>
+        <div class="maps-grid" id="maps-grid"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ════════ SETTINGS ════════ -->
+  <div class="tab-panel" id="panel-settings">
+    <div class="main-area" style="overflow-y:auto;padding:30px;max-width:700px;">
+      <div style="font-family:'Rajdhani',sans-serif;font-size:22px;font-weight:700;letter-spacing:3px;color:var(--gold);margin-bottom:24px;">SETTINGS</div>
+
+      <!-- Overlay & Hotkey -->
+      <div style="background:var(--surface);border:1px solid var(--border);padding:20px;margin-bottom:16px;">
+        <div style="font-family:'Share Tech Mono',monospace;font-size:9px;color:var(--text3);letter-spacing:2px;text-transform:uppercase;margin-bottom:16px;">Overlay &amp; Hotkey</div>
+
+        <!-- Window Opacity -->
+        <div style="margin-bottom:18px;">
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;">
+            <div>
+              <div style="font-size:13px;color:var(--text);">Window Opacity</div>
+              <div style="font-size:11px;color:var(--text3);margin-top:2px;">Lower opacity lets you see through the tracker while in-game</div>
+            </div>
+            <span id="opacity-val" style="font-family:'Share Tech Mono',monospace;font-size:13px;color:var(--gold);min-width:38px;text-align:right;">100%</span>
+          </div>
+          <input type="range" id="opacity-slider" min="10" max="100" value="100"
+            style="width:100%;accent-color:var(--gold);cursor:pointer;height:4px;">
+        </div>
+
+        <!-- Always on Top -->
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:18px;">
+          <div>
+            <div style="font-size:13px;color:var(--text);">Always on Top</div>
+            <div style="font-size:11px;color:var(--text3);margin-top:2px;">Keep the tracker above the game window at all times</div>
+          </div>
+          <label class="tog"><input type="checkbox" id="pref-always-on-top"><span class="tog-track"></span></label>
+        </div>
+
+        <!-- Show/Hide Hotkey — rebindable -->
+        <div style="background:var(--surface2);border:1px solid var(--border2);padding:12px 16px;">
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px;">
+            <div>
+              <div style="font-size:13px;color:var(--text);">Show / Hide Hotkey</div>
+              <div style="font-size:11px;color:var(--text3);margin-top:2px;">Works globally, even during fullscreen raids — click to rebind</div>
+            </div>
+            <div style="display:flex;align-items:center;gap:8px;">
+              <div id="hotkey-display" style="font-family:'Share Tech Mono',monospace;font-size:12px;color:var(--gold);background:rgba(200,168,75,.1);border:1px solid rgba(200,168,75,.3);padding:5px 12px;min-width:110px;text-align:center;">Ctrl+Shift+K</div>
+              <button id="hotkey-rebind-btn" style="background:var(--surface3);border:1px solid var(--border2);color:var(--text2);font-family:'Share Tech Mono',monospace;font-size:10px;letter-spacing:1px;padding:5px 10px;cursor:pointer;transition:all .15s;">CHANGE</button>
+            </div>
+          </div>
+          <!-- Capture mode row — hidden by default -->
+          <div id="hotkey-capture-row" style="display:none;align-items:center;gap:10px;padding:8px 0 2px;">
+            <div id="hotkey-capture-hint" style="font-size:11px;color:var(--gold);font-family:'Share Tech Mono',monospace;flex:1;">Press your new hotkey combination…</div>
+            <button id="hotkey-cancel-btn" style="background:none;border:1px solid var(--border2);color:var(--text3);font-size:11px;padding:4px 10px;cursor:pointer;">Cancel</button>
+          </div>
+          <div id="hotkey-error" style="display:none;font-size:11px;color:var(--red);padding-top:6px;"></div>
+        </div>
+      </div>
+
+      <!-- Live Game Integration -->
+      <div style="background:var(--surface);border:1px solid var(--border);padding:20px;margin-bottom:16px;">
+        <div style="display:flex;align-items:center;gap:10px;margin-bottom:16px;">
+          <div style="font-family:'Share Tech Mono',monospace;font-size:9px;color:var(--text3);letter-spacing:2px;text-transform:uppercase;">Live Game Integration</div>
+          <span id="live-status-badge" style="font-family:'Share Tech Mono',monospace;font-size:9px;letter-spacing:1px;padding:2px 8px;border:1px solid var(--border2);color:var(--text4);">SEARCHING</span>
+        </div>
+
+        <div id="live-log-path" style="font-size:11px;color:var(--text3);margin-bottom:14px;font-family:'Share Tech Mono',monospace;padding:8px 10px;background:var(--surface2);border:1px solid var(--border2);">
+          Searching for EFT log files…
+        </div>
+
+        <!-- Auto quest complete from log -->
+        <div class="pref-row" style="border-radius:4px 4px 0 0;">
+          <div>
+            <div class="pref-label">Auto-complete quests from log</div>
+            <div class="pref-sub">Automatically marks a quest complete when EFT's log detects you handed it in</div>
+          </div>
+          <label class="tog"><input type="checkbox" id="pref-auto-quest" checked><span class="tog-track"></span></label>
+        </div>
+
+        <!-- Auto-show on matchmaking -->
+        <div class="pref-row">
+          <div>
+            <div class="pref-label">Auto-show on matchmaking</div>
+            <div class="pref-sub">Automatically open the tracker when you enter matchmaking queue</div>
+          </div>
+          <label class="tog"><input type="checkbox" id="pref-auto-show" checked><span class="tog-track"></span></label>
+        </div>
+
+        <!-- Quest reminder in raid -->
+        <div class="pref-row">
+          <div>
+            <div class="pref-label">Quest reminder when raid starts</div>
+            <div class="pref-sub">Show a toast with your active quests on the detected map</div>
+          </div>
+          <label class="tog"><input type="checkbox" id="pref-raid-reminder" checked><span class="tog-track"></span></label>
+        </div>
+
+        <!-- Quick-complete after raid -->
+        <div class="pref-row" style="border-radius:0 0 4px 4px;">
+          <div>
+            <div class="pref-label">Quick-complete panel after raid</div>
+            <div class="pref-sub">After a raid ends, show a panel to quickly mark quests as complete</div>
+          </div>
+          <label class="tog"><input type="checkbox" id="pref-post-raid" checked><span class="tog-track"></span></label>
+        </div>
+      </div>
+
+      <!-- Appearance -->
+      <div style="background:var(--surface);border:1px solid var(--border);padding:20px;margin-bottom:16px;">
+        <div style="font-family:'Share Tech Mono',monospace;font-size:9px;color:var(--text3);letter-spacing:2px;text-transform:uppercase;margin-bottom:16px;">Appearance</div>
+
+        <!-- Dark / Light mode -->
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:18px;">
+          <div>
+            <div style="font-size:13px;color:var(--text);">Interface Mode</div>
+            <div style="font-size:11px;color:var(--text3);margin-top:2px;">Switch between dark and light backgrounds</div>
+          </div>
+          <div class="mode-toggle">
+            <div class="mode-toggle-opt active" data-mode="dark">🌙 DARK</div>
+            <div class="mode-toggle-opt" data-mode="light">☀ LIGHT</div>
+          </div>
+        </div>
+
+        <!-- Accent Color -->
+        <div style="display:flex;align-items:center;justify-content:space-between;">
+          <div>
+            <div style="font-size:13px;color:var(--text);">Accent Color</div>
+            <div style="font-size:11px;color:var(--text3);margin-top:2px;">Changes the highlight color throughout the app</div>
+          </div>
+          <div style="display:flex;align-items:center;gap:10px;">
+            <button class="theme-swatch active" data-theme="gold"   title="Gold (default)" style="background:#c8a84b;"></button>
+            <button class="theme-swatch"        data-theme="green"  title="Green"          style="background:#4caf6e;"></button>
+            <button class="theme-swatch"        data-theme="blue"   title="Blue"           style="background:#4a8fd4;"></button>
+            <button class="theme-swatch"        data-theme="red"    title="Red"            style="background:#e05252;"></button>
+            <button class="theme-swatch"        data-theme="purple" title="Purple"         style="background:#8b6fc4;"></button>
+            <span id="theme-label" style="font-family:'Share Tech Mono',monospace;font-size:11px;color:var(--gold);min-width:44px;">GOLD</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Preferences -->
+      <div style="margin-bottom:16px;">
+        <div style="font-family:'Share Tech Mono',monospace;font-size:9px;color:var(--text3);letter-spacing:2px;text-transform:uppercase;padding:0 2px;margin-bottom:8px;">Preferences</div>
+
+        <div class="pref-row" style="border-radius:4px 4px 0 0;">
+          <div>
+            <div class="pref-label">Double-click to complete quest</div>
+            <div class="pref-sub">Requires two clicks instead of one — prevents accidental completions</div>
+          </div>
+          <label class="tog"><input type="checkbox" id="pref-dbl-click"><span class="tog-track"></span></label>
+        </div>
+
+        <div class="pref-row">
+          <div>
+            <div class="pref-label">Show non-Kappa quests</div>
+            <div class="pref-sub">Display side quests that aren't required for the Kappa container</div>
+          </div>
+          <label class="tog"><input type="checkbox" id="pref-non-kappa" checked><span class="tog-track"></span></label>
+        </div>
+
+        <div class="pref-row" style="border-radius:0 0 4px 4px;">
+          <div>
+            <div class="pref-label">Default map on startup</div>
+            <div class="pref-sub">Auto-select this map filter when the app opens</div>
+          </div>
+          <select id="pref-default-map" style="background:var(--surface2);border:1px solid var(--border2);color:var(--text);font-family:'Share Tech Mono',monospace;font-size:11px;padding:6px 10px;cursor:pointer;min-width:140px;">
+            <option value="">None (show all)</option>
+            <option value="Customs">Customs</option>
+            <option value="Woods">Woods</option>
+            <option value="Shoreline">Shoreline</option>
+            <option value="Interchange">Interchange</option>
+            <option value="Reserve">Reserve</option>
+            <option value="Lighthouse">Lighthouse</option>
+            <option value="Streets of Tarkov">Streets of Tarkov</option>
+            <option value="Ground Zero">Ground Zero</option>
+            <option value="The Lab">The Lab</option>
+          </select>
+        </div>
+      </div>
+
+      <!-- Faction -->
+      <div style="background:var(--surface);border:1px solid var(--border);padding:20px;margin-bottom:16px;">
+        <div style="font-family:'Share Tech Mono',monospace;font-size:9px;color:var(--text3);letter-spacing:2px;text-transform:uppercase;margin-bottom:12px;">Faction</div>
+        <div style="display:flex;gap:10px;">
+          <button class="faction-card" id="s-bear" onclick="selectFaction('bear')" style="flex:1;padding:12px;">
+            <div class="faction-emblem" style="font-size:24px;color:#e05252;">🐻</div>
+            <div class="faction-name" style="font-size:16px;color:#e05252;">BEAR</div>
+          </button>
+          <button class="faction-card" id="s-usec" onclick="selectFaction('usec')" style="flex:1;padding:12px;">
+            <div class="faction-emblem" style="font-size:24px;color:#4a90d9;">🦅</div>
+            <div class="faction-name" style="font-size:16px;color:#4a90d9;">USEC</div>
+          </button>
+        </div>
+      </div>
+
+      <!-- PMC Level -->
+      <div style="background:var(--surface);border:1px solid var(--border);padding:20px;margin-bottom:16px;">
+        <div style="font-family:'Share Tech Mono',monospace;font-size:9px;color:var(--text3);letter-spacing:2px;text-transform:uppercase;margin-bottom:12px;">PMC Level</div>
+        <div style="display:flex;align-items:center;gap:12px;">
+          <button onclick="adjustLevel(-1)" style="background:var(--surface2);border:1px solid var(--border2);color:var(--text2);width:36px;height:36px;font-size:20px;cursor:pointer;">−</button>
+          <span id="level-display" style="font-family:'Share Tech Mono',monospace;font-size:28px;color:var(--gold);min-width:48px;text-align:center;">1</span>
+          <button onclick="adjustLevel(1)" style="background:var(--surface2);border:1px solid var(--border2);color:var(--text2);width:36px;height:36px;font-size:20px;cursor:pointer;">+</button>
+          <span style="font-size:12px;color:var(--text3);">Affects which quests show as Available Now</span>
+        </div>
+      </div>
+
+      <!-- Export/Import -->
+      <div style="background:var(--surface);border:1px solid var(--border);padding:20px;margin-bottom:16px;">
+        <div style="font-family:'Share Tech Mono',monospace;font-size:9px;color:var(--text3);letter-spacing:2px;text-transform:uppercase;margin-bottom:12px;">Progress Backup</div>
+        <div style="display:flex;gap:10px;">
+          <button class="btn-sm" id="s-export" style="padding:8px 20px;font-size:13px;">Export Progress</button>
+          <button class="btn-sm" id="s-import" style="padding:8px 20px;font-size:13px;">Import Progress</button>
+        </div>
+        <div style="font-size:11px;color:var(--text3);margin-top:8px;">Save your progress to a file or restore from a backup.</div>
+      </div>
+
+      <!-- ── CLOUD SYNC ──────────────────────────────────────────────── -->
+      <div id="sync-section" style="background:var(--surface);border:1px solid var(--border);padding:20px;margin-bottom:16px;">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;">
+          <div style="font-family:'Share Tech Mono',monospace;font-size:9px;color:var(--text3);letter-spacing:2px;text-transform:uppercase;">Cloud Sync</div>
+          <div style="display:flex;align-items:center;gap:6px;">
+            <span id="sync-status-dot" style="width:7px;height:7px;border-radius:50%;background:var(--text4);display:inline-block;flex-shrink:0;transition:background .3s;"></span>
+            <span id="sync-status-text" style="font-family:'Share Tech Mono',monospace;font-size:10px;color:var(--text3);letter-spacing:1px;">Not signed in</span>
+          </div>
+        </div>
+
+        <!-- Signed-out state -->
+        <div id="sync-signed-out">
+          <div style="font-size:12px;color:var(--text3);margin-bottom:14px;line-height:1.6;">
+            Sign in with Google to sync your progress across your PC and phone automatically. Your data is private — only you can access it.
+          </div>
+          <button onclick="SYNC.signIn()"
+            style="display:flex;align-items:center;gap:10px;background:var(--surface2);border:1px solid var(--border2);color:var(--text);padding:10px 18px;cursor:pointer;font-family:'Rajdhani',sans-serif;font-weight:600;font-size:14px;letter-spacing:1px;transition:border-color .15s;"
+            onmouseover="this.style.borderColor='rgba(200,168,75,.5)'"
+            onmouseout="this.style.borderColor='var(--border2)'">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none"><path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/><path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/><path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l3.66-2.84z" fill="#FBBC05"/><path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/></svg>
+            Sign in with Google
+          </button>
+        </div>
+
+        <!-- Signed-in state -->
+        <div id="sync-signed-in" style="display:none;">
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;">
+            <div>
+              <div style="font-size:13px;color:var(--text);" id="sync-user-email"></div>
+              <div style="font-size:11px;color:var(--text3);margin-top:2px;">Progress syncs automatically across all signed-in devices</div>
+            </div>
+            <button onclick="SYNC.syncNow()"
+              style="background:var(--surface2);border:1px solid var(--border2);color:var(--text2);padding:7px 14px;cursor:pointer;font-family:'Share Tech Mono',monospace;font-size:10px;letter-spacing:1px;transition:all .15s;"
+              onmouseover="this.style.borderColor='rgba(200,168,75,.4)';this.style.color='var(--gold)'"
+              onmouseout="this.style.borderColor='var(--border2)';this.style.color='var(--text2)'">
+              ↻ SYNC NOW
+            </button>
+          </div>
+          <button onclick="SYNC.signOut()"
+            style="background:none;border:none;color:var(--text4);font-family:'Share Tech Mono',monospace;font-size:10px;letter-spacing:1px;cursor:pointer;padding:0;text-decoration:underline;"
+            onmouseover="this.style.color='var(--text3)'"
+            onmouseout="this.style.color='var(--text4)'">
+            Sign out
+          </button>
+        </div>
+      </div>
+
+      <!-- ── PREMIUM / AD SECTION ──────────────────────────────────────── -->
+      <!-- Shown for free users: ad unit + upgrade prompt -->
+      <div id="ad-section" style="margin-bottom:24px;">
+        <!-- Premium upgrade card -->
+        <div id="premium-upgrade-card" style="background:linear-gradient(135deg,rgba(200,168,75,.08) 0%,rgba(200,168,75,.03) 100%);border:1px solid rgba(200,168,75,.3);padding:16px 20px;margin-bottom:12px;display:flex;align-items:center;justify-content:space-between;gap:12px;">
+          <div>
+            <div style="font-family:'Rajdhani',sans-serif;font-size:15px;font-weight:700;letter-spacing:2px;color:var(--gold);margin-bottom:3px;">⭐ KAPPA TRACKER PREMIUM</div>
+            <div style="font-size:11px;color:var(--text3);">Support the project and remove all ads — one subscription keeps the servers running.</div>
+          </div>
+          <button id="premium-upgrade-btn" onclick="premiumUpgrade()" style="background:var(--gold);border:none;color:#080a0c;font-family:'Rajdhani',sans-serif;font-weight:700;font-size:13px;letter-spacing:2px;padding:9px 20px;cursor:pointer;white-space:nowrap;flex-shrink:0;transition:opacity .15s;" onmouseover="this.style.opacity='.85'" onmouseout="this.style.opacity='1'">GET PREMIUM</button>
+        </div>
+
+        <!-- 400×300 Overwolf Ad unit — hidden for premium users -->
+        <div id="ow-ad-wrapper" style="display:flex;justify-content:center;padding:0 0 4px;">
+          <div id="overwolf-ad" style="width:400px;height:300px;background:var(--surface);border:1px solid var(--border);display:flex;align-items:center;justify-content:center;overflow:hidden;">
+            <div style="font-family:'Share Tech Mono',monospace;font-size:9px;color:var(--text4);letter-spacing:2px;">ADVERTISEMENT</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Shown for premium users: badge only (no ad) -->
+      <div id="premium-badge-section" style="display:none;margin-bottom:24px;">
+        <div style="background:linear-gradient(135deg,rgba(200,168,75,.12) 0%,rgba(200,168,75,.04) 100%);border:1px solid rgba(200,168,75,.35);padding:14px 20px;display:flex;align-items:center;gap:12px;">
+          <span style="font-size:20px;">⭐</span>
+          <div>
+            <div style="font-family:'Rajdhani',sans-serif;font-size:14px;font-weight:700;letter-spacing:2px;color:var(--gold);">PREMIUM ACTIVE</div>
+            <div style="font-size:11px;color:var(--text3);margin-top:2px;">Thank you for supporting Kappa Tracker — ads are hidden.</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Danger Zone -->
+      <div style="background:rgba(224,82,82,.06);border:1px solid rgba(224,82,82,.25);padding:20px;margin-top:24px;">
+        <div style="font-family:'Rajdhani',sans-serif;font-size:14px;font-weight:700;letter-spacing:2px;color:var(--red);margin-bottom:4px;">⚠ DANGER ZONE</div>
+        <div style="font-size:12px;color:var(--text3);margin-bottom:16px;">These actions are permanent and cannot be undone.</div>
+        <div style="display:flex;flex-direction:column;gap:8px;">
+          <div style="display:flex;align-items:center;justify-content:space-between;padding:10px 14px;background:var(--surface);border:1px solid var(--border);">
+            <div><div style="font-size:13px;color:var(--text);">Wipe Quest Progress</div><div style="font-size:11px;color:var(--text3);">Clears all completed quests</div></div>
+            <button class="btn-sm btn-danger" id="wipe-quests-btn">Wipe Quests</button>
+          </div>
+          <div style="display:flex;align-items:center;justify-content:space-between;padding:10px 14px;background:var(--surface);border:1px solid var(--border);">
+            <div><div style="font-size:13px;color:var(--text);">Wipe Collector Progress</div><div style="font-size:11px;color:var(--text3);">Resets all streamer item progress</div></div>
+            <button class="btn-sm btn-danger" id="wipe-col-btn">Wipe Collector</button>
+          </div>
+          <div style="display:flex;align-items:center;justify-content:space-between;padding:10px 14px;background:var(--surface);border:1px solid var(--border);">
+            <div><div style="font-size:13px;color:var(--text);">Wipe Hideout Progress</div><div style="font-size:11px;color:var(--text3);">Clears all gathered items and counts</div></div>
+            <button class="btn-sm btn-danger" id="wipe-hide-btn">Wipe Hideout</button>
+          </div>
+          <div style="display:flex;align-items:center;justify-content:space-between;padding:10px 14px;background:var(--surface);border:1px solid var(--border);">
+            <div><div style="font-size:13px;color:var(--text);">Wipe Story Progress</div><div style="font-size:11px;color:var(--text3);">Resets ending choice, story checks and step progress</div></div>
+            <button class="btn-sm btn-danger" id="wipe-story-btn">Wipe Story</button>
+          </div>
+          <div style="display:flex;align-items:center;justify-content:space-between;padding:10px 14px;background:rgba(224,82,82,.08);border:1px solid rgba(224,82,82,.3);">
+            <div><div style="font-size:13px;font-weight:600;color:var(--red);">Wipe ALL Progress</div><div style="font-size:11px;color:var(--text3);">Resets everything — quests, collector, hideout, story</div></div>
+            <button class="btn-sm btn-danger" id="wipe-all-btn" style="font-weight:700;">WIPE EVERYTHING</button>
+          </div>
+        </div>
+      </div>
+
+      <div style="font-size:11px;color:var(--text4);margin-top:24px;text-align:center;">Kappa Tracker v1.0 — Unofficial EFT tool · Data from tarkov.dev API</div>
+    </div>
+  </div>
+
+    <!-- ════════ STORY ════════ -->
+  <div class="tab-panel" id="panel-story">
+    <div class="story-layout">
+
+      <!-- ── Left: chapter/quest list ── -->
+      <div class="story-chapter-panel">
+        <div class="scp-header">
+          <input type="text" id="story-search" placeholder="Search story view" class="story-search-input"/>
+          <!-- Path selector (compact ending filter) -->
+          <div class="story-path-row" id="story-path-row"></div>
+        </div>
+        <div class="scp-list" id="story-quest-list"></div>
+      </div>
+
+      <!-- ── Right: quest detail ── -->
+      <div class="story-detail-panel" id="story-detail-panel">
+        <div class="sdp-empty" id="sdp-empty">
+          <div class="sdp-empty-icon">≡</div>
+          <div class="sdp-empty-text">Select a chapter</div>
+        </div>
+        <!-- Detail content injected by app-story.js -->
+        <div id="story-quest-detail" style="display:none;height:100%;overflow-y:auto;"></div>
+      </div>
+
+    </div>
+  </div>
+
+</div><!-- /app -->
+
+<!-- Toast -->
+<div id="toast"></div>
+
+<!-- ════ MATCHMAKING OVERLAY ════ -->
+<div id="matchmaking-overlay" style="display:none;position:fixed;bottom:24px;right:24px;z-index:3000;background:var(--bg);border:1px solid var(--gold);padding:0;min-width:280px;animation:fadeIn .3s ease;box-shadow:0 4px 24px rgba(0,0,0,.6);">
+  <div style="background:rgba(200,168,75,.12);padding:10px 16px;border-bottom:1px solid rgba(200,168,75,.25);display:flex;align-items:center;justify-content:space-between;">
+    <div style="display:flex;align-items:center;gap:8px;">
+      <span style="width:8px;height:8px;border-radius:50%;background:var(--gold);display:inline-block;animation:pulse 1.5s infinite;"></span>
+      <span style="font-family:'Share Tech Mono',monospace;font-size:10px;letter-spacing:2px;color:var(--gold);">MATCHMAKING</span>
+    </div>
+    <button onclick="document.getElementById('matchmaking-overlay').style.display='none'" style="background:none;border:none;color:var(--text3);font-size:16px;cursor:pointer;padding:0;line-height:1;">✕</button>
+  </div>
+  <div style="padding:12px 16px;">
+    <div style="font-size:12px;color:var(--text2);margin-bottom:8px;">Searching for a match… Use this time to review your quests.</div>
+    <div id="mm-map-hint" style="font-size:11px;color:var(--text3);margin-bottom:10px;"></div>
+    <button onclick="switchTab('quests');document.getElementById('matchmaking-overlay').style.display='none';" style="width:100%;background:rgba(200,168,75,.1);border:1px solid rgba(200,168,75,.3);color:var(--gold);font-family:'Rajdhani',sans-serif;font-weight:700;font-size:12px;letter-spacing:2px;padding:7px;cursor:pointer;">VIEW ACTIVE QUESTS</button>
+  </div>
+</div>
+
+<!-- ════ POST-RAID QUICK-COMPLETE PANEL ════ -->
+<div id="post-raid-panel" style="display:none;position:fixed;bottom:24px;right:24px;z-index:3000;background:var(--bg);border:1px solid var(--green);min-width:320px;max-width:400px;max-height:480px;display:none;flex-direction:column;animation:fadeIn .3s ease;box-shadow:0 4px 24px rgba(0,0,0,.6);">
+  <div style="background:rgba(76,175,110,.1);padding:10px 16px;border-bottom:1px solid rgba(76,175,110,.25);display:flex;align-items:center;justify-content:space-between;flex-shrink:0;">
+    <div style="display:flex;align-items:center;gap:8px;">
+      <span style="font-size:14px;">✓</span>
+      <span style="font-family:'Share Tech Mono',monospace;font-size:10px;letter-spacing:2px;color:var(--green);">RAID COMPLETE</span>
+    </div>
+    <button onclick="document.getElementById('post-raid-panel').style.display='none'" style="background:none;border:none;color:var(--text3);font-size:16px;cursor:pointer;padding:0;line-height:1;">✕</button>
+  </div>
+  <div style="padding:10px 16px;border-bottom:1px solid var(--border);flex-shrink:0;">
+    <div style="font-size:11px;color:var(--text3);">Which quests did you complete? Click to mark done.</div>
+    <div id="post-raid-map-label" style="font-family:'Share Tech Mono',monospace;font-size:10px;color:var(--text4);margin-top:4px;"></div>
+  </div>
+  <div id="post-raid-list" style="overflow-y:auto;flex:1;padding:8px 0;"></div>
+  <div style="padding:10px 16px;border-top:1px solid var(--border);display:flex;gap:8px;flex-shrink:0;">
+    <button onclick="document.getElementById('post-raid-panel').style.display='none'" style="flex:1;background:var(--surface2);border:1px solid var(--border2);color:var(--text2);font-family:'Rajdhani',sans-serif;font-weight:700;font-size:12px;letter-spacing:1px;padding:8px;cursor:pointer;">CLOSE</button>
+    <button onclick="switchTab('quests');document.getElementById('post-raid-panel').style.display='none';" style="flex:1;background:rgba(76,175,110,.1);border:1px solid rgba(76,175,110,.3);color:var(--green);font-family:'Rajdhani',sans-serif;font-weight:700;font-size:12px;letter-spacing:1px;padding:8px;cursor:pointer;">OPEN QUESTS</button>
+  </div>
+</div>
+
+<!-- ════ FTUE WELCOME MODAL ════ -->
+<div class="modal-overlay" id="ftue-modal" style="z-index:4000;">
+  <div style="background:var(--bg);border:1px solid var(--border2);max-width:560px;width:94%;animation:fadeIn .25s ease;overflow:hidden;">
+
+    <!-- Header -->
+    <div style="background:var(--surface);padding:20px 24px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:14px;">
+      <div style="width:40px;height:40px;background:rgba(200,168,75,.12);border:1px solid rgba(200,168,75,.3);display:flex;align-items:center;justify-content:center;font-family:'Rajdhani',sans-serif;font-size:22px;font-weight:700;color:var(--gold);">κ</div>
+      <div>
+        <div style="font-family:'Rajdhani',sans-serif;font-size:20px;font-weight:700;letter-spacing:3px;color:var(--gold);">WELCOME TO KAPPA TRACKER</div>
+        <div style="font-size:11px;color:var(--text3);margin-top:2px;">Here's everything you need to know to get started</div>
+      </div>
+    </div>
+
+    <!-- Feature tips -->
+    <div style="padding:20px 24px;display:flex;flex-direction:column;gap:10px;">
+      <div style="display:flex;gap:14px;align-items:flex-start;padding:10px 12px;background:var(--surface);border:1px solid var(--border);border-left:3px solid var(--gold);">
+        <div style="font-size:20px;flex-shrink:0;margin-top:1px;">📋</div>
+        <div>
+          <div style="font-size:13px;font-weight:600;color:var(--text);margin-bottom:2px;">Track all 494 Kappa quests</div>
+          <div style="font-size:11px;color:var(--text3);">Use the QUESTS tab to filter by trader, map, or availability. Prerequisite checking is automatic — locked quests show why they're blocked.</div>
+        </div>
+      </div>
+      <div style="display:flex;gap:14px;align-items:flex-start;padding:10px 12px;background:var(--surface);border:1px solid var(--border);border-left:3px solid #4a90d9;">
+        <div style="font-size:20px;flex-shrink:0;margin-top:1px;">⚔</div>
+        <div>
+          <div style="font-size:13px;font-weight:600;color:var(--text);margin-bottom:2px;">Raid Planner — know before you drop</div>
+          <div style="font-size:11px;color:var(--text3);">Click <strong style="color:var(--gold);">⚔ RAID PLANNER</strong> in the header before queuing to see all active quests on your chosen map.</div>
+        </div>
+      </div>
+      <div style="display:flex;gap:14px;align-items:flex-start;padding:10px 12px;background:var(--surface);border:1px solid var(--border);border-left:3px solid #4caf6e;">
+        <div style="font-size:20px;flex-shrink:0;margin-top:1px;">🎮</div>
+        <div>
+          <div style="font-size:13px;font-weight:600;color:var(--text);margin-bottom:2px;">Live game integration</div>
+          <div style="font-size:11px;color:var(--text3);">When EFT is running the tracker detects matchmaking, auto-shows quest reminders when a raid starts, and pops a quick-complete panel when you extract.</div>
+        </div>
+      </div>
+      <div style="display:flex;gap:14px;align-items:flex-start;padding:10px 12px;background:rgba(200,168,75,.05);border:1px solid rgba(200,168,75,.2);border-left:3px solid var(--gold);">
+        <div style="font-size:20px;flex-shrink:0;margin-top:1px;">⌨</div>
+        <div>
+          <div style="font-size:13px;font-weight:600;color:var(--text);margin-bottom:2px;">Hide / show anytime — <span id="ftue-hotkey-label" style="color:var(--gold);font-family:'Share Tech Mono',monospace;font-size:12px;">Ctrl+Shift+K</span></div>
+          <div style="font-size:11px;color:var(--text3);">Works globally, even inside a raid. You can change this hotkey in Settings → Overlay & Hotkey.</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Footer -->
+    <div style="padding:14px 24px;background:var(--surface);border-top:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;">
+      <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:11px;color:var(--text3);">
+        <input type="checkbox" id="ftue-dont-show" style="accent-color:var(--gold);">
+        Don't show this again
+      </label>
+      <button onclick="closeFTUE()" style="background:var(--gold);border:none;color:#080a0c;font-family:'Rajdhani',sans-serif;font-weight:700;font-size:13px;letter-spacing:2px;padding:9px 28px;cursor:pointer;transition:opacity .15s;" onmouseover="this.style.opacity='.85'" onmouseout="this.style.opacity='1'">LET'S GO</button>
+    </div>
+  </div>
+</div>
+
+<!-- Wipe Modal -->
+<div class="modal-overlay" id="wipe-modal">
+  <div class="modal">
+    <h3>CONFIRM WIPE</h3>
+    <p id="wipe-modal-text">This will permanently clear progress. Cannot be undone.</p>
+    <div class="modal-btns">
+      <button class="btn-cancel" id="wipe-cancel">Cancel</button>
+      <button class="btn-confirm" id="wipe-confirm">Wipe It</button>
+    </div>
+  </div>
+</div>
+
+<!-- Firebase SDK (compat mode — works with vanilla JS, no bundler needed) -->
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+
+<script src="platform.js"></script>
+<script src="firebase-config.js"></script>
+<script src="app-sync.js"></script>
+<script src="api.js"></script>
+<script src="data-traders.js"></script>
+<script src="data-story.js"></script>
+<script src="app-quests.js"></script>
+<script src="app-collector.js"></script>
+<script src="app-hideout.js"></script>
+<script src="app-ammo.js"></script>
+<script src="app-items.js"></script>
+<script src="app-story.js"></script>
+<script src="app-maps.js"></script>
+<script src="app-main.js"></script>
+
+  <!-- ════ FACTION SELECT MODAL ════ -->
+  <div id="faction-modal" class="modal-overlay" style="z-index:2000;">
+    <div style="background:var(--bg);border:1px solid var(--border2);padding:0;max-width:520px;width:90%;animation:fadeIn .2s ease;">
+      <div style="background:var(--surface);padding:20px 24px;border-bottom:1px solid var(--border);">
+        <div style="font-family:'Rajdhani',sans-serif;font-size:22px;font-weight:700;letter-spacing:3px;color:var(--gold);">CHOOSE YOUR FACTION</div>
+        <div style="font-size:12px;color:var(--text3);margin-top:4px;">This affects story mode paths and some quest filters. You can change this in Settings.</div>
+      </div>
+      <div style="display:flex;gap:0;padding:24px;gap:16px;">
+        <div id="faction-bear" class="faction-card" onclick="selectFaction('bear')">
+          <div class="faction-emblem" style="color:#e05252;">🐻</div>
+          <div class="faction-name" style="color:#e05252;">BEAR</div>
+          <div class="faction-desc">Российские ЧВК</div>
+          <div class="faction-sub">Russian PMC · Patriot background</div>
+        </div>
+        <div id="faction-usec" class="faction-card" onclick="selectFaction('usec')">
+          <div class="faction-emblem" style="color:#4a90d9;">🦅</div>
+          <div class="faction-name" style="color:#4a90d9;">USEC</div>
+          <div class="faction-desc">United Security</div>
+          <div class="faction-sub">American PMC · Mercenary background</div>
+        </div>
+      </div>
+      <div style="padding:0 24px 20px;text-align:center;">
+        <button onclick="skipFaction()" style="background:none;border:none;color:var(--text3);font-size:12px;cursor:pointer;text-decoration:underline;">Skip for now</button>
+      </div>
+    </div>
+  </div>
+
+
+  <!-- ════ RAID PLANNER MODAL ════ -->
+  <div id="raid-modal" class="modal-overlay" style="z-index:1500;">
+    <div style="background:var(--bg);border:1px solid var(--border2);width:680px;max-width:95vw;max-height:80vh;display:flex;flex-direction:column;animation:fadeIn .2s ease;">
+      <div style="background:var(--surface);padding:16px 20px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:12px;flex-shrink:0;">
+        <div style="font-family:'Rajdhani',sans-serif;font-size:20px;font-weight:700;letter-spacing:3px;color:var(--gold);">⚔ RAID PLANNER</div>
+        <select id="raid-map-select" style="background:var(--surface2);border:1px solid var(--border2);color:var(--text);padding:5px 10px;font-family:'Share Tech Mono',monospace;font-size:12px;flex:1;" onchange="renderRaidQuests()">
+          <option value="">— Select a map —</option>
+          <option value="customs">Customs</option>
+          <option value="woods">Woods</option>
+          <option value="factory-day">Factory</option>
+          <option value="shoreline">Shoreline</option>
+          <option value="interchange">Interchange</option>
+          <option value="reserve">Reserve</option>
+          <option value="lighthouse">Lighthouse</option>
+          <option value="streets-of-tarkov">Streets of Tarkov</option>
+          <option value="ground-zero">Ground Zero</option>
+          <option value="the-lab">The Lab</option>
+        </select>
+        <button onclick="document.getElementById('raid-modal').classList.remove('open')" style="background:none;border:none;color:var(--text3);font-size:20px;cursor:pointer;padding:0 4px;">✕</button>
+      </div>
+      <div id="raid-quest-list" style="flex:1;overflow-y:auto;padding:16px;">
+        <div style="text-align:center;color:var(--text3);padding:40px;font-family:'Share Tech Mono',monospace;font-size:12px;">Select a map to see active quests</div>
+      </div>
+      <div id="raid-footer" style="background:var(--surface);border-top:1px solid var(--border);padding:12px 20px;font-family:'Share Tech Mono',monospace;font-size:11px;color:var(--text3);display:none;">
+        <span id="raid-summary"></span>
+        <button onclick="window.electronAPI&&window.electronAPI.openExternal('https://tarkov.dev/map/'+(document.getElementById('raid-map-select').value||'customs'))" style="float:right;background:var(--surface2);border:1px solid var(--border2);color:var(--text2);padding:4px 12px;cursor:pointer;font-size:11px;">Open Map →</button>
+      </div>
+    </div>
+  </div>
+
+<!-- Overwolf Ad SDK — loaded async so it never blocks the app -->
+<script src="https://content.overwolf.com/libs/ads/latest/owads.min.js" async
+  onload="owAdSdkReady()" onerror="console.log('[Ad] SDK not available (non-Overwolf env)')"></script>
+
+<!-- ── MOBILE BOTTOM NAV ── -->
+<nav id="mobile-nav" aria-label="Main navigation">
+  <button class="mob-nav-btn active" data-tab="dashboard" onclick="switchTab('dashboard')">
+    <svg viewBox="0 0 16 16"><path d="M2 2h5v6H2zm7 0h5v3h-5zM9 7h5v7H9zM2 10h5v6H2z"/></svg>
+    HOME
+  </button>
+  <button class="mob-nav-btn" data-tab="quests" onclick="switchTab('quests')">
+    <svg viewBox="0 0 16 16"><path d="M2 3h12v1.5H2zm0 4h12v1.5H2zm0 4h8v1.5H2z"/></svg>
+    QUESTS
+    <span class="mob-nav-badge" id="mob-badge-quests"></span>
+  </button>
+  <button class="mob-nav-btn" data-tab="hideout" onclick="switchTab('hideout')">
+    <svg viewBox="0 0 16 16"><path d="M8 1L1 7h2v8h4v-4h2v4h4V7h2z"/></svg>
+    HIDEOUT
+  </button>
+  <button class="mob-nav-btn" data-tab="collector" onclick="switchTab('collector')">
+    <svg viewBox="0 0 16 16"><path d="M8 1l1.8 3.6L14 5.4l-3 2.9.7 4.1L8 10.4l-3.7 2 .7-4.1-3-2.9 4.2-.8z"/></svg>
+    COLLECTOR
+  </button>
+  <button class="mob-nav-btn" id="mob-more-btn" onclick="openMobMore()">
+    <svg viewBox="0 0 16 16"><circle cx="3" cy="8" r="1.5"/><circle cx="8" cy="8" r="1.5"/><circle cx="13" cy="8" r="1.5"/></svg>
+    MORE
+  </button>
+</nav>
+
+<!-- ── MOBILE MORE DRAWER ── -->
+<div id="mob-more-overlay" onclick="closeMobMore()"></div>
+<div id="mob-more-sheet" role="dialog" aria-label="More options">
+  <div class="mob-more-handle"></div>
+  <div class="mob-more-title">MORE TABS</div>
+  <button class="mob-more-item" onclick="switchTab('items');closeMobMore()">
+    <svg viewBox="0 0 16 16"><path d="M3 2h10l1 3H2zm0 4h10v8H3zm2 2v2h2V8zm4 0v2h2V8z"/></svg>
+    ITEMS TO KEEP
+  </button>
+  <button class="mob-more-item" onclick="switchTab('ammo');closeMobMore()">
+    <svg viewBox="0 0 16 16"><path d="M7 1h2v6l1 1v6H6V8l1-1zm-1 9h4v1H6zm0 2h4v1H6z"/></svg>
+    AMMO CHART
+  </button>
+  <button class="mob-more-item" onclick="switchTab('maps');closeMobMore()">
+    <svg viewBox="0 0 16 16"><path d="M1 2l4 1.5 6-2 4 1.5V14l-4-1.5-6 2-4-1.5zm4 2.5v8l6-2v-8z"/></svg>
+    MAPS
+  </button>
+  <button class="mob-more-item" onclick="switchTab('story');closeMobMore()">
+    <svg viewBox="0 0 16 16"><path d="M2 1h12v2H2zm0 4h9v2H2zm0 4h12v2H2zm0 4h7v2H2z"/></svg>
+    STORY
+  </button>
+  <button class="mob-more-item" onclick="switchTab('settings');closeMobMore()">
+    <svg viewBox="0 0 24 24" fill="currentColor"><path d="M19.14 12.94c.04-.3.06-.61.06-.94s-.02-.64-.07-.94l2.03-1.58a.49.49 0 00.12-.61l-1.92-3.32a.49.49 0 00-.59-.22l-2.39.96a7.02 7.02 0 00-1.62-.94l-.36-2.54a.484.484 0 00-.48-.41h-3.84c-.24 0-.43.17-.47.41l-.36 2.54c-.59.24-1.13.57-1.62.94l-2.39-.96a.48.48 0 00-.59.22L2.74 8.87a.47.47 0 00.12.61l2.03 1.58c-.05.3-.07.62-.07.94s.02.64.07.94l-2.03 1.58a.47.47 0 00-.12.61l1.92 3.32c.12.22.37.29.59.22l2.39-.96c.5.37 1.04.7 1.62.94l.36 2.54c.05.24.24.41.48.41h3.84c.24 0 .44-.17.47-.41l.36-2.54c.59-.24 1.13-.57 1.62-.94l2.39.96c.22.08.47 0 .59-.22l1.92-3.32a.47.47 0 00-.12-.61l-2.01-1.58zM12 15.6a3.6 3.6 0 110-7.2 3.6 3.6 0 010 7.2z"/></svg>
+    SETTINGS
+  </button>
+</div>
+
+</body>
+</html>

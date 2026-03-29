@@ -1,0 +1,517 @@
+/* ═══════════════════════════════════════════════════════════════════════════
+   KAPPA TRACKER — Mobile Styles
+   Applied via .is-mobile class on <html> (set by platform.js at boot).
+   Also triggered at ≤ 600 px for browser-based responsive testing.
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+/* ── Shared mobile baseline ─────────────────────────────────────────────── */
+.is-mobile,
+@media (max-width: 600px) { html { } }   /* selector anchor */
+
+.is-mobile * {
+  -webkit-tap-highlight-color: transparent;
+  -webkit-touch-callout: none;
+}
+.is-mobile body {
+  overscroll-behavior: none;
+  overflow: hidden;
+  height: 100dvh;
+  display: flex;
+  flex-direction: column;
+}
+
+/* ── Hide desktop-only chrome ───────────────────────────────────────────── */
+.is-mobile #header,
+.is-mobile #tabs,
+.is-mobile .kappa-bar,
+.is-mobile #ad-section,
+.is-mobile #ftue-modal {
+  display: none !important;
+}
+
+/* ── Mobile compact header ──────────────────────────────────────────────── */
+#mobile-header {
+  display: none;
+}
+.is-mobile #mobile-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 0 14px;
+  height: 52px;
+  /* iOS safe area (notch) */
+  padding-top: env(safe-area-inset-top, 0);
+  height: calc(52px + env(safe-area-inset-top, 0));
+  background: var(--bg);
+  border-bottom: 1px solid var(--border);
+  position: sticky;
+  top: 0;
+  z-index: 100;
+  flex-shrink: 0;
+}
+.is-ios #mobile-header {
+  padding-top: max(env(safe-area-inset-top), 14px);
+  height: calc(52px + max(env(safe-area-inset-top), 14px));
+}
+
+/* Hexagon logo mark */
+#mh-logo {
+  width: 30px;
+  height: 30px;
+  background: var(--gold);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: 'Rajdhani', sans-serif;
+  font-weight: 700;
+  font-size: 16px;
+  color: #000;
+  clip-path: polygon(50% 0%, 100% 25%, 100% 75%, 50% 100%, 0% 75%, 0% 25%);
+  flex-shrink: 0;
+}
+#mh-title {
+  font-family: 'Rajdhani', sans-serif;
+  font-weight: 700;
+  font-size: 14px;
+  letter-spacing: 2px;
+  color: var(--text);
+  white-space: nowrap;
+}
+#mh-stats {
+  margin-left: auto;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+#mh-level,
+#mh-progress {
+  background: var(--surface2);
+  border: 1px solid var(--border2);
+  color: var(--text2);
+  font-family: 'Share Tech Mono', monospace;
+  font-size: 10px;
+  padding: 3px 7px;
+  letter-spacing: 1px;
+  white-space: nowrap;
+}
+#mh-progress {
+  border-color: var(--gold);
+  color: var(--gold);
+}
+
+/* Slim progress bar below the mobile header */
+#mobile-kappa-bar {
+  display: none;
+  height: 3px;
+  background: var(--surface3);
+  flex-shrink: 0;
+}
+#mobile-kappa-bar .kappa-fill {
+  height: 100%;
+  background: var(--gold);
+  transition: width .4s ease;
+}
+.is-mobile #mobile-kappa-bar {
+  display: block;
+}
+
+/* ── App body on mobile ─────────────────────────────────────────────────── */
+.is-mobile #app {
+  flex: 1;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
+.is-mobile .tab-panel {
+  display: none;
+  flex: 1;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior: contain;
+  flex-direction: column;
+}
+.is-mobile .tab-panel.active {
+  display: flex;
+}
+
+/* ── Bottom navigation bar ──────────────────────────────────────────────── */
+#mobile-nav {
+  display: none;
+}
+.is-mobile #mobile-nav {
+  display: flex;
+  flex-shrink: 0;
+  height: calc(58px + env(safe-area-inset-bottom, 0px));
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+  background: var(--bg);
+  border-top: 1px solid var(--border);
+  z-index: 200;
+  align-items: stretch;
+}
+.mob-nav-btn {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 3px;
+  background: none;
+  border: none;
+  color: var(--text4);
+  cursor: pointer;
+  padding: 6px 4px;
+  font-family: 'Share Tech Mono', monospace;
+  font-size: 8px;
+  letter-spacing: 0.5px;
+  transition: color 0.15s;
+  position: relative;
+  min-height: 44px;
+}
+.mob-nav-btn svg {
+  width: 22px;
+  height: 22px;
+  fill: currentColor;
+  transition: fill 0.15s;
+}
+.mob-nav-btn.active {
+  color: var(--gold);
+}
+/* Active indicator — thin gold line at top of button */
+.mob-nav-btn.active::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 15%;
+  right: 15%;
+  height: 2px;
+  background: var(--gold);
+  border-radius: 0 0 2px 2px;
+}
+/* Count badge */
+.mob-nav-badge {
+  position: absolute;
+  top: 5px;
+  right: calc(50% - 18px);
+  background: var(--gold);
+  color: #000;
+  font-family: 'Share Tech Mono', monospace;
+  font-size: 8px;
+  font-weight: 700;
+  padding: 1px 3px;
+  border-radius: 6px;
+  min-width: 14px;
+  text-align: center;
+  line-height: 1.4;
+  display: none;
+}
+.mob-nav-badge.visible {
+  display: block;
+}
+
+/* ── "More" slide-up drawer ─────────────────────────────────────────────── */
+#mob-more-overlay {
+  display: none;
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.55);
+  z-index: 190;
+  backdrop-filter: blur(2px);
+}
+#mob-more-overlay.open {
+  display: block;
+}
+#mob-more-sheet {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  background: var(--surface);
+  border-top: 1px solid var(--border2);
+  border-radius: 14px 14px 0 0;
+  padding-bottom: calc(70px + env(safe-area-inset-bottom, 0px));
+  z-index: 195;
+  transform: translateY(100%);
+  transition: transform 0.22s cubic-bezier(0.32, 0.72, 0, 1);
+}
+#mob-more-sheet.open {
+  transform: translateY(0);
+}
+.mob-more-handle {
+  width: 36px;
+  height: 4px;
+  background: var(--border2);
+  border-radius: 2px;
+  margin: 10px auto 8px;
+}
+.mob-more-title {
+  font-family: 'Share Tech Mono', monospace;
+  font-size: 10px;
+  letter-spacing: 2px;
+  color: var(--text4);
+  padding: 4px 20px 10px;
+  text-transform: uppercase;
+}
+.mob-more-item {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 0 20px;
+  font-family: 'Rajdhani', sans-serif;
+  font-weight: 600;
+  font-size: 16px;
+  letter-spacing: 1px;
+  color: var(--text);
+  border: none;
+  background: none;
+  width: 100%;
+  text-align: left;
+  cursor: pointer;
+  min-height: 52px;
+  transition: background 0.1s;
+}
+.mob-more-item:active {
+  background: var(--surface2);
+}
+.mob-more-item svg {
+  width: 20px;
+  height: 20px;
+  fill: var(--text3);
+  flex-shrink: 0;
+}
+.mob-more-item .mob-more-pill {
+  margin-left: auto;
+  background: var(--surface3);
+  color: var(--text3);
+  font-family: 'Share Tech Mono', monospace;
+  font-size: 9px;
+  padding: 2px 7px;
+  border-radius: 4px;
+}
+
+/* ── Dashboard — mobile layout ──────────────────────────────────────────── */
+.is-mobile #panel-dashboard .main-area {
+  padding: 0;
+}
+.is-mobile .dash-scroll {
+  padding: 12px;
+  gap: 12px;
+  display: flex;
+  flex-direction: column;
+}
+.is-mobile .stat-grid {
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}
+.is-mobile .stat-card {
+  padding: 14px 12px;
+  cursor: pointer;
+}
+.is-mobile .sc-val {
+  font-size: 24px;
+}
+.is-mobile .trader-grid {
+  grid-template-columns: repeat(3, 1fr);
+  gap: 6px;
+}
+/* Stack the up-next / recently-completed columns */
+.is-mobile .dash-bottom {
+  flex-direction: column;
+  gap: 12px;
+}
+.is-mobile .dash-col {
+  width: 100%;
+  min-width: 0;
+}
+
+/* ── Quests — mobile layout ─────────────────────────────────────────────── */
+.is-mobile .quest-sidebar {
+  display: none;
+}
+.is-mobile .quest-main {
+  width: 100%;
+  padding: 0;
+  flex: 1;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+.is-mobile #mob-quest-filters {
+  display: flex;
+}
+/* Mobile filter chip row */
+#mob-quest-filters {
+  display: none;
+  overflow-x: auto;
+  gap: 6px;
+  padding: 8px 12px;
+  scrollbar-width: none;
+  border-bottom: 1px solid var(--border);
+  flex-shrink: 0;
+  background: var(--bg);
+}
+#mob-quest-filters::-webkit-scrollbar {
+  display: none;
+}
+.mob-filter-chip {
+  flex-shrink: 0;
+  padding: 5px 12px;
+  border: 1px solid var(--border2);
+  background: var(--surface2);
+  color: var(--text3);
+  font-family: 'Share Tech Mono', monospace;
+  font-size: 10px;
+  letter-spacing: 0.5px;
+  cursor: pointer;
+  white-space: nowrap;
+  min-height: 30px;
+  transition: all 0.12s;
+}
+.mob-filter-chip.active {
+  border-color: var(--gold);
+  color: var(--gold);
+  background: rgba(212, 175, 55, 0.12);
+}
+/* Quest list scroll area */
+.is-mobile .quest-scroll {
+  flex: 1;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+}
+/* Bigger tap targets for quest rows */
+.is-mobile .quest-row {
+  min-height: 52px;
+  padding: 10px 14px;
+}
+
+/* ── Hideout — mobile layout ────────────────────────────────────────────── */
+.is-mobile .hideout-layout,
+.is-mobile #panel-hideout > div {
+  flex-direction: column !important;
+}
+.is-mobile .hideout-sidebar {
+  width: 100% !important;
+  max-height: 180px;
+  border-right: none !important;
+  border-bottom: 1px solid var(--border) !important;
+  overflow-y: auto;
+}
+.is-mobile .hideout-main {
+  flex: 1;
+  overflow-y: auto;
+}
+
+/* ── Collector — mobile ─────────────────────────────────────────────────── */
+.is-mobile .collector-grid {
+  grid-template-columns: repeat(2, 1fr);
+  gap: 8px;
+  padding: 10px;
+}
+.is-mobile .collector-item {
+  min-height: 52px;
+}
+
+/* ── Ammo chart — horizontal scroll on narrow screens ──────────────────── */
+.is-mobile #panel-ammo .ammo-wrap,
+.is-mobile #panel-ammo > div {
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+.is-mobile .ammo-table {
+  min-width: 580px;
+}
+
+/* ── Story — stack columns vertically on mobile ─────────────────────────── */
+.is-mobile .story-layout {
+  flex-direction: column !important;
+  overflow-y: auto;
+  flex: 1;
+}
+.is-mobile .story-left {
+  width: 100% !important;
+  border-right: none !important;
+  border-bottom: 1px solid var(--border);
+  padding: 12px 14px !important;
+  flex-shrink: 0;
+}
+.is-mobile .story-left-header {
+  display: none; /* saves space — heading already obvious from nav label */
+}
+.is-mobile .ending-cards {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}
+.is-mobile .ending-card {
+  padding: 10px 12px !important;
+  font-size: 12px;
+}
+.is-mobile .story-main {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  overflow: hidden;
+}
+.is-mobile .story-body {
+  flex: 1;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  padding: 10px 12px;
+}
+
+/* ── Settings — hide desktop-only controls ──────────────────────────────── */
+.is-mobile #setting-hotkey-row,
+.is-mobile #setting-opacity-row,
+.is-mobile #setting-alwaysontop-row,
+.is-mobile #setting-live-row,
+.is-mobile #setting-autoshow-row,
+.is-mobile #setting-raid-row {
+  display: none !important;
+}
+
+/* ── Faction & general modals — full-screen on mobile ───────────────────── */
+.is-mobile .modal-box {
+  width: 100% !important;
+  max-width: 100% !important;
+  border-radius: 0 !important;
+  margin: 0 !important;
+}
+
+/* ── Responsive media query (for browser preview) ───────────────────────── */
+@media (max-width: 600px) {
+  #header,
+  #tabs,
+  .kappa-bar { display: none !important; }
+
+  #mobile-header { display: flex !important; }
+  #mobile-kappa-bar { display: block !important; }
+  #mobile-nav { display: flex !important; }
+
+  body {
+    overflow: hidden;
+    height: 100dvh;
+    display: flex;
+    flex-direction: column;
+  }
+  #app {
+    flex: 1;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+  }
+  .tab-panel {
+    display: none;
+    flex: 1;
+    overflow-y: auto;
+    flex-direction: column;
+  }
+  .tab-panel.active {
+    display: flex;
+  }
+  .stat-grid { grid-template-columns: 1fr 1fr; gap: 8px; }
+  .quest-sidebar { display: none; }
+  #mob-quest-filters { display: flex; }
+  .quest-main { width: 100%; padding: 0; }
+}

@@ -1,0 +1,76 @@
+{
+  "name": "kappa-tracker",
+  "version": "1.1.0",
+  "description": "Unofficial Escape from Tarkov Kappa Container progress tracker — quests, hideout, collector, ammo, maps and live game integration.",
+  "main": "main.js",
+  "author": {
+    "name": "Will",
+    "email": "dejavuyonko@gmail.com"
+  },
+  "license": "MIT",
+  "keywords": ["escape from tarkov", "eft", "kappa", "tracker", "overwolf"],
+  "overwolf": {
+    "packages": ["overlay"],
+    "supportedGameIds": [21634]
+  },
+  "scripts": {
+    "start": "node start.js",
+    "start:bare": "ow-electron .",
+    "build": "ow-electron-builder --publish=never",
+    "build:dir": "ow-electron-builder --dir --publish=never",
+    "mobile:sync": "npx cap sync",
+    "mobile:android": "npx cap sync && npx cap open android",
+    "mobile:ios": "npx cap sync && npx cap open ios"
+  },
+  "build": {
+    "nodeGypRebuild": false,
+    "appId": "com.kappatracker.eft",
+    "asar": true,
+    "overwolf": {
+      "disableAdOptimization": false
+    },
+    "productName": "Kappa Tracker",
+    "copyright": "Copyright © 2025 Will. Kappa Tracker is an unofficial EFT community tool and is not affiliated with Battlestate Games.",
+    "win": {
+      "target": [{ "target": "nsis", "arch": ["x64"] }],
+      "icon": "assets/icon.ico",
+      "artifactName": "${productName}-Setup-${version}.${ext}",
+      "requestedExecutionLevel": "asInvoker"
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true,
+      "installerIcon": "assets/icon.ico",
+      "uninstallerIcon": "assets/icon.ico",
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true,
+      "shortcutName": "Kappa Tracker",
+      "license": "LICENSE.txt"
+    },
+    "files": [
+      "**/*",
+      "!node_modules/.cache",
+      "!dist",
+      "!android",
+      "!ios",
+      "!*.md",
+      "!*.zip",
+      "!ad-placement-preview.html"
+    ],
+    "directories": { "output": "dist" }
+  },
+  "dependencies": {
+    "@capacitor/core": "^6.0.0",
+    "@capacitor/preferences": "^6.0.0",
+    "@capacitor/status-bar": "^6.0.0",
+    "@capacitor/splash-screen": "^6.0.0",
+    "@capacitor/keyboard": "^6.0.0"
+  },
+  "devDependencies": {
+    "@overwolf/ow-electron": "latest",
+    "@overwolf/ow-electron-builder": "latest",
+    "@capacitor/cli": "^6.0.0",
+    "@capacitor/android": "^6.0.0",
+    "@capacitor/ios": "^6.0.0"
+  }
+}

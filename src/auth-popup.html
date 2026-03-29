@@ -1,0 +1,124 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Kappa Tracker — Sign In</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      background: #0d0d0d;
+      color: #c9c9c9;
+      font-family: 'Share Tech Mono', 'Courier New', monospace;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      height: 100vh;
+      text-align: center;
+    }
+    .card {
+      padding: 40px 32px;
+      border: 1px solid #2a2a2a;
+      background: #111;
+      max-width: 340px;
+      width: 100%;
+    }
+    .logo  { font-size: 36px; color: #d4af37; margin-bottom: 8px; }
+    .title { font-size: 11px; letter-spacing: 3px; color: #d4af37; margin-bottom: 32px; }
+    .msg   { font-size: 12px; letter-spacing: 1px; line-height: 1.8; min-height: 48px; }
+    .spinner {
+      display: inline-block; width: 18px; height: 18px;
+      border: 2px solid #333; border-top-color: #d4af37;
+      border-radius: 50%; animation: spin 0.8s linear infinite;
+      vertical-align: middle; margin-right: 8px;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    .ok   { color: #5cb85c; }
+    .err  { color: #e74c3c; }
+    .gold { color: #d4af37; }
+  </style>
+</head>
+<body>
+  <div class="card">
+    <div class="logo">κ</div>
+    <div class="title">KAPPA TRACKER</div>
+    <div class="msg" id="msg">
+      <span class="spinner"></span> Opening Google Sign-In&hellip;
+    </div>
+  </div>
+
+  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
+
+  <script>
+    var STORE_URL = 'http://localhost:47291/store-token';
+
+    firebase.initializeApp({
+      apiKey:     'AIzaSyCLSUarcTqh-ZulwZNJrQb4ljAb8HZG-UQ',
+      authDomain: 'kappa-tracker-4bff9.firebaseapp.com',
+      projectId:  'kappa-tracker-4bff9'
+    });
+
+    var auth     = firebase.auth();
+    var provider = new firebase.auth.GoogleAuthProvider();
+    provider.setCustomParameters({ prompt: 'select_account' });
+
+    var msgEl = document.getElementById('msg');
+
+    auth.signInWithPopup(provider).then(function (result) {
+      var idToken     = result.credential ? result.credential.idToken     : null;
+      var accessToken = result.credential ? result.credential.accessToken : null;
+      var displayName = result.user.displayName || result.user.email;
+
+      var payload = {
+        type:        'kappa-auth',
+        idToken:     idToken,
+        accessToken: accessToken,
+        displayName: displayName
+      };
+
+      msgEl.innerHTML =
+        '<span class="ok">&#10003; Signed in as ' + displayName + '</span>' +
+        '<br><br>Returning to Kappa Tracker&hellip;';
+
+      // Primary: POST tokens to the local auth server so the main Overwolf
+      // window can collect them via polling (/get-token). This is the reliable
+      // path because cross-origin postMessage from localhost → extension://
+      // is blocked by Overwolf's security model.
+      fetch(STORE_URL, {
+        method:  'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body:    JSON.stringify(payload)
+      }).catch(function (e) {
+        console.warn('[Kappa Auth] Could not POST to store-token:', e.message);
+      });
+
+      // Secondary: also try postMessage in case the environment supports it.
+      if (window.opener) {
+        try { window.opener.postMessage(payload, '*'); } catch (e) {}
+      }
+
+      setTimeout(function () { window.close(); }, 1800);
+
+    }).catch(function (err) {
+      if (err.code === 'auth/popup-closed-by-user') {
+        fetch(STORE_URL, {
+          method:  'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body:    JSON.stringify({ type: 'kappa-auth', cancelled: true })
+        }).catch(function () {});
+        if (window.opener) {
+          try { window.opener.postMessage({ type: 'kappa-auth', cancelled: true }, '*'); } catch (e) {}
+        }
+        window.close();
+        return;
+      }
+      console.error('[Kappa Auth] Sign-in error:', err);
+      msgEl.innerHTML =
+        '<span class="err">&#10007; Sign-in failed</span>' +
+        '<br><br><span style="font-size:10px;color:#888">' +
+        (err.message || err.code) + '</span>';
+    });
+  </script>
+</body>
+</html>

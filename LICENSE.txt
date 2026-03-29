@@ -1,0 +1,11 @@
+Kappa Tracker — Unofficial Escape from Tarkov Progress Tracker
+Copyright (c) 2025 Will
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software to use it for personal, non-commercial purposes.
+
+DISCLAIMER: Kappa Tracker is an unofficial community tool and is not affiliated
+with, endorsed by, or connected to Battlestate Games or Escape from Tarkov.
+All game data is sourced from the public tarkov.dev community API.
+
+This software is provided "as is", without warranty of any kind.
