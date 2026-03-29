@@ -5,6 +5,51 @@ let activeEnding = 'savior';
 // Currently selected quest ID in the left panel
 let activeQuestId = null;
 
+// Cache: item name (lowercase) → iconLink URL
+const itemIconCache = {};
+
+// Fetch item icons from tarkov.dev for a list of keyItems, then patch the DOM
+async function loadKeyItemIcons(keyItems, gridEl) {
+  // Only lookup items with a specific name (skip "Any …" generics)
+  const lookups = keyItems.filter(it => it.name && !/^any\b/i.test(it.name));
+  if (!lookups.length) return;
+
+  // Items not yet cached
+  const uncached = lookups.filter(it => !(it.name.toLowerCase() in itemIconCache));
+
+  if (uncached.length) {
+    // Build a batched GQL query using aliases
+    const aliases = uncached.map((it, i) => {
+      const safe = it.name.replace(/[^a-z0-9]/gi, ' ').trim().replace(/\s+/g, ' ');
+      return `item${i}: items(name: ${JSON.stringify(safe)}, lang: en) { iconLink }`;
+    }).join('\n');
+    try {
+      const result = await tarkovGQL(`{ ${aliases} }`);
+      uncached.forEach((it, i) => {
+        const rows = result.data[`item${i}`];
+        itemIconCache[it.name.toLowerCase()] = (rows && rows[0]) ? rows[0].iconLink : null;
+      });
+    } catch (e) {
+      console.warn('Story: item icon fetch failed', e);
+    }
+  }
+
+  // Patch icons into already-rendered grid rows
+  if (!gridEl) return;
+  gridEl.querySelectorAll('.sdv-item-row[data-item-name]').forEach(row => {
+    const key = row.dataset.itemName.toLowerCase();
+    const url = itemIconCache[key];
+    if (url && !row.querySelector('.sdv-item-img')) {
+      const img = document.createElement('img');
+      img.src = url;
+      img.className = 'sdv-item-img';
+      img.alt = '';
+      img.loading = 'lazy';
+      row.prepend(img);
+    }
+  });
+}
+
 // ── Setup ─────────────────────────────────────────────────────────────────────
 
 function storySetup() {
@@ -248,13 +293,19 @@ function renderQuestDetail(q, chapterNum) {
 
       const row = document.createElement('div');
       row.className = 'sdv-item-row';
+      row.dataset.itemName = item.name;
       row.innerHTML = `
-        <div class="sdv-item-name">${item.name}${item.amount != null ? ` <span class="sdv-item-amt">×${item.amount}</span>` : ''}</div>
-        <div class="sdv-item-tags">${tags.join('')}${item.note ? `<span class="sdv-item-note">${item.note}</span>` : ''}</div>
+        <div class="sdv-item-info">
+          <div class="sdv-item-name">${item.name}${item.amount != null ? ` <span class="sdv-item-amt">×${item.amount}</span>` : ''}</div>
+          <div class="sdv-item-tags">${tags.join('')}${item.note ? `<span class="sdv-item-note">${item.note}</span>` : ''}</div>
+        </div>
       `;
       grid.appendChild(row);
     });
     wrap.appendChild(grid);
+
+    // Async: fetch icons from tarkov.dev and patch them in
+    loadKeyItemIcons(relatedItems, grid);
   }
 
   // ── Wiki link ──

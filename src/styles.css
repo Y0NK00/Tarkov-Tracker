@@ -1020,10 +1020,16 @@ body::after {
 /* Key items grid */
 .sdv-items-grid { display: flex; flex-direction: column; gap: 4px; margin-top: 4px; }
 .sdv-item-row {
-  display: flex; flex-direction: column; gap: 4px;
+  display: flex; align-items: center; gap: 10px;
   padding: 8px 12px; background: var(--surface);
   border: 1px solid var(--border);
 }
+.sdv-item-img {
+  width: 48px; height: 48px; object-fit: contain;
+  flex-shrink: 0; image-rendering: pixelated;
+  background: rgba(0,0,0,.3); border: 1px solid var(--border);
+}
+.sdv-item-info { display: flex; flex-direction: column; gap: 4px; flex: 1; min-width: 0; }
 .sdv-item-name { color: var(--text); font-family: 'Barlow Condensed', sans-serif; font-size: 15px; font-weight: 600; }
 .sdv-item-amt { color: var(--gold); font-weight: 400; }
 .sdv-item-tags { display: flex; flex-wrap: wrap; gap: 4px; }
