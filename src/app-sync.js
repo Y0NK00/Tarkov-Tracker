@@ -196,10 +196,67 @@ var SYNC = (function () {
   function _saveKnownAccount(user) {
     var accounts = _loadKnownAccounts();
     var existing = accounts.findIndex(function (a) { return a.uid === user.uid; });
-    var entry = { uid: user.uid, name: user.displayName || user.email, email: user.email };
+    // Preserve existing nickname if already saved
+    var prev     = existing >= 0 ? accounts[existing] : {};
+    var entry    = { uid: user.uid, name: user.displayName || user.email, email: user.email, nickname: prev.nickname || null };
     if (existing >= 0) accounts[existing] = entry;
     else accounts.push(entry);
     try { localStorage.setItem('kappa_known_accounts', JSON.stringify(accounts)); } catch (e) {}
+  }
+
+  function _setNickname(uid, nickname) {
+    var accounts = _loadKnownAccounts();
+    var idx = accounts.findIndex(function (a) { return a.uid === uid; });
+    if (idx < 0) return;
+    accounts[idx].nickname = nickname.trim() || null;
+    try { localStorage.setItem('kappa_known_accounts', JSON.stringify(accounts)); } catch (e) {}
+  }
+
+  function _displayName(a) {
+    return a.nickname || a.name || a.email;
+  }
+
+  // Inline rename widget — replaces labelEl content with an input, saves on blur/Enter
+  function _openRename(uid, labelEl, fallback) {
+    if (labelEl.querySelector('input')) return;
+    var input = document.createElement('input');
+    input.type = 'text';
+    input.maxLength = 32;
+    input.placeholder = fallback;
+    input.value = labelEl.textContent.replace(/^→ /, '');
+    input.style.cssText =
+      'background:var(--surface3);border:1px solid var(--gold);color:var(--gold);' +
+      'font-family:\'Share Tech Mono\',monospace;font-size:inherit;padding:0 4px;' +
+      'outline:none;width:140px;';
+    function commit() {
+      _setNickname(uid, input.value);
+      _updateUI(true); // re-render
+    }
+    input.addEventListener('blur', commit);
+    input.addEventListener('keydown', function (e) {
+      if (e.key === 'Enter')  { e.preventDefault(); input.blur(); }
+      if (e.key === 'Escape') { _updateUI(true); }
+    });
+    labelEl.textContent = '';
+    labelEl.appendChild(input);
+    input.focus();
+    input.select();
+  }
+
+  function _makeRenameBtn(uid, labelEl, fallback) {
+    var btn = document.createElement('button');
+    btn.textContent = '✎';
+    btn.title = 'Rename';
+    btn.style.cssText =
+      'background:none;border:none;color:var(--text4);cursor:pointer;font-size:12px;' +
+      'padding:0 4px;line-height:1;flex-shrink:0;transition:color .12s;';
+    btn.onmouseover = function () { btn.style.color = 'var(--gold)'; };
+    btn.onmouseout  = function () { btn.style.color = 'var(--text4)'; };
+    btn.addEventListener('click', function (e) {
+      e.stopPropagation();
+      _openRename(uid, labelEl, fallback);
+    });
+    return btn;
   }
 
   function _renderSavedAccounts(currentUid) {
@@ -210,18 +267,29 @@ var SYNC = (function () {
 
     el.innerHTML = '<div style="font-family:\'Share Tech Mono\',monospace;font-size:9px;color:var(--text4);letter-spacing:1.5px;margin-bottom:6px;">SAVED ACCOUNTS</div>';
     accounts.forEach(function (a) {
+      var row = document.createElement('div');
+      row.style.cssText =
+        'display:flex;align-items:center;gap:4px;background:var(--surface2);' +
+        'border:1px solid var(--border);margin-bottom:4px;transition:border-color .15s;';
+
       var btn = document.createElement('button');
       btn.style.cssText =
-        'display:block;width:100%;text-align:left;background:var(--surface2);' +
-        'border:1px solid var(--border);color:var(--text2);padding:8px 12px;' +
-        'font-family:\'Share Tech Mono\',monospace;font-size:11px;cursor:pointer;' +
-        'margin-bottom:4px;transition:all .15s;letter-spacing:.5px;';
-      btn.textContent = '→ ' + (a.name || a.email);
+        'flex:1;text-align:left;background:none;border:none;color:var(--text2);' +
+        'padding:8px 12px;font-family:\'Share Tech Mono\',monospace;font-size:11px;' +
+        'cursor:pointer;letter-spacing:.5px;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;';
+      btn.textContent = '→ ' + _displayName(a);
       btn.title = a.email;
-      btn.onmouseover = function () { btn.style.borderColor = 'rgba(200,168,75,.4)'; btn.style.color = 'var(--gold)'; };
-      btn.onmouseout  = function () { btn.style.borderColor = 'var(--border)';        btn.style.color = 'var(--text2)'; };
       btn.addEventListener('click', function () { SYNC.switchAccount(); });
-      el.appendChild(btn);
+
+      var labelEl = btn; // rename operates on the button's text
+      var renameBtn = _makeRenameBtn(a.uid, btn, a.name || a.email);
+
+      row.onmouseover = function () { row.style.borderColor = 'rgba(200,168,75,.4)'; btn.style.color = 'var(--gold)'; };
+      row.onmouseout  = function () { row.style.borderColor = 'var(--border)';        btn.style.color = 'var(--text2)'; };
+
+      row.appendChild(btn);
+      row.appendChild(renameBtn);
+      el.appendChild(row);
     });
   }
 
@@ -232,7 +300,28 @@ var SYNC = (function () {
     var emEl  = document.getElementById('sync-user-email');
     if (inEl)  inEl.style.display  = signedIn ? '' : 'none';
     if (outEl) outEl.style.display = signedIn ? 'none' : '';
-    if (emEl && signedIn) emEl.textContent = SYNC.userEmail || '';
+
+    if (emEl && signedIn) {
+      // Show nickname (if set) or Google display name, with a rename button
+      var accounts  = _loadKnownAccounts();
+      var current   = accounts.find(function (a) { return a.uid === SYNC.userId; });
+      var label     = current ? _displayName(current) : (SYNC.userEmail || '');
+      var fallback  = current ? (current.name || current.email) : label;
+
+      emEl.style.display   = 'flex';
+      emEl.style.alignItems = 'center';
+      emEl.style.gap       = '4px';
+      emEl.innerHTML       = '';
+
+      var nameSpan = document.createElement('span');
+      nameSpan.textContent = label;
+
+      var renameBtn = _makeRenameBtn(SYNC.userId, nameSpan, fallback);
+
+      emEl.appendChild(nameSpan);
+      emEl.appendChild(renameBtn);
+    }
+
     if (signedIn) _renderSavedAccounts(SYNC.userId);
   }
 
