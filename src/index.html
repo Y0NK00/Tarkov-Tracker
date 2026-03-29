@@ -561,12 +561,24 @@
               ↻ SYNC NOW
             </button>
           </div>
-          <button onclick="SYNC.signOut()"
-            style="background:none;border:none;color:var(--text4);font-family:'Share Tech Mono',monospace;font-size:10px;letter-spacing:1px;cursor:pointer;padding:0;text-decoration:underline;"
-            onmouseover="this.style.color='var(--text3)'"
-            onmouseout="this.style.color='var(--text4)'">
-            Sign out
-          </button>
+
+          <!-- Saved accounts quick-switch -->
+          <div id="saved-accounts-list" style="margin-bottom:12px;"></div>
+
+          <div style="display:flex;gap:8px;flex-wrap:wrap;">
+            <button onclick="SYNC.switchAccount()"
+              style="background:var(--surface2);border:1px solid var(--border2);color:var(--text2);padding:7px 14px;cursor:pointer;font-family:'Share Tech Mono',monospace;font-size:10px;letter-spacing:1px;flex:1;transition:all .15s;"
+              onmouseover="this.style.borderColor='rgba(200,168,75,.4)';this.style.color='var(--gold)'"
+              onmouseout="this.style.borderColor='var(--border2)';this.style.color='var(--text2)'">
+              ⇄ SWITCH ACCOUNT
+            </button>
+            <button onclick="SYNC.signOut()"
+              style="background:none;border:1px solid var(--border);color:var(--text4);font-family:'Share Tech Mono',monospace;font-size:10px;letter-spacing:1px;cursor:pointer;padding:7px 14px;transition:all .15s;"
+              onmouseover="this.style.color='var(--text3)';this.style.borderColor='var(--border2)'"
+              onmouseout="this.style.color='var(--text4)';this.style.borderColor='var(--border)'">
+              Sign out
+            </button>
+          </div>
         </div>
       </div>
 

@@ -156,6 +156,7 @@ var SYNC = (function () {
         _applyToApp(merged);
         try { localStorage.setItem('kappa_v3', JSON.stringify(merged)); } catch (e) {}
         try { localStorage.setItem('kappa_last_uid', user.uid); } catch (e) {}
+        _saveKnownAccount(user);
         await _upload(merged);
       } else {
         // First time signing in — push local progress up to this new account
@@ -187,6 +188,43 @@ var SYNC = (function () {
     _setStatus('idle', 'Not signed in');
   }
 
+  // ── Saved accounts (localStorage) ─────────────────────────────────────────
+  function _loadKnownAccounts() {
+    try { return JSON.parse(localStorage.getItem('kappa_known_accounts') || '[]'); } catch (e) { return []; }
+  }
+
+  function _saveKnownAccount(user) {
+    var accounts = _loadKnownAccounts();
+    var existing = accounts.findIndex(function (a) { return a.uid === user.uid; });
+    var entry = { uid: user.uid, name: user.displayName || user.email, email: user.email };
+    if (existing >= 0) accounts[existing] = entry;
+    else accounts.push(entry);
+    try { localStorage.setItem('kappa_known_accounts', JSON.stringify(accounts)); } catch (e) {}
+  }
+
+  function _renderSavedAccounts(currentUid) {
+    var el = document.getElementById('saved-accounts-list');
+    if (!el) return;
+    var accounts = _loadKnownAccounts().filter(function (a) { return a.uid !== currentUid; });
+    if (!accounts.length) { el.innerHTML = ''; return; }
+
+    el.innerHTML = '<div style="font-family:\'Share Tech Mono\',monospace;font-size:9px;color:var(--text4);letter-spacing:1.5px;margin-bottom:6px;">SAVED ACCOUNTS</div>';
+    accounts.forEach(function (a) {
+      var btn = document.createElement('button');
+      btn.style.cssText =
+        'display:block;width:100%;text-align:left;background:var(--surface2);' +
+        'border:1px solid var(--border);color:var(--text2);padding:8px 12px;' +
+        'font-family:\'Share Tech Mono\',monospace;font-size:11px;cursor:pointer;' +
+        'margin-bottom:4px;transition:all .15s;letter-spacing:.5px;';
+      btn.textContent = '→ ' + (a.name || a.email);
+      btn.title = a.email;
+      btn.onmouseover = function () { btn.style.borderColor = 'rgba(200,168,75,.4)'; btn.style.color = 'var(--gold)'; };
+      btn.onmouseout  = function () { btn.style.borderColor = 'var(--border)';        btn.style.color = 'var(--text2)'; };
+      btn.addEventListener('click', function () { SYNC.switchAccount(); });
+      el.appendChild(btn);
+    });
+  }
+
   // ── Settings panel UI ─────────────────────────────────────────────────────
   function _updateUI(signedIn) {
     var inEl  = document.getElementById('sync-signed-in');
@@ -195,6 +233,7 @@ var SYNC = (function () {
     if (inEl)  inEl.style.display  = signedIn ? '' : 'none';
     if (outEl) outEl.style.display = signedIn ? 'none' : '';
     if (emEl && signedIn) emEl.textContent = SYNC.userEmail || '';
+    if (signedIn) _renderSavedAccounts(SYNC.userId);
   }
 
   // ── Mobile (Capacitor) sign-in — Firestore relay ──────────────────────────
@@ -440,6 +479,15 @@ var SYNC = (function () {
     signOut: async function () {
       if (!_auth) return;
       await _auth.signOut();
+    },
+
+    // Signs out the current account then immediately opens the Google picker
+    // so the user can select a different saved account
+    switchAccount: async function () {
+      if (!_auth) return;
+      await _auth.signOut();
+      // Small delay so sign-out state propagates before re-opening auth
+      setTimeout(function () { SYNC.signIn(); }, 300);
     }
   };
 

@@ -146,8 +146,6 @@ function setLevelDirect(val) {
 
 function _openLevelInput(el) {
   if (el.querySelector('input')) return; // already open
-  const span = el.tagName === 'INPUT' ? el : el;
-  const prev = span.textContent;
 
   const input = document.createElement('input');
   input.type = 'number';
@@ -158,16 +156,20 @@ function _openLevelInput(el) {
     'color:var(--gold);font-family:\'Share Tech Mono\',monospace;font-size:inherit;' +
     'text-align:center;padding:0 2px;outline:none;-moz-appearance:textfield;';
 
+  // Keep el in the DOM (preserves its ID) — just swap its content
+  el.textContent = '';
+  el.onclick = null;
+  el.appendChild(input);
+
   function commit() {
-    setLevelDirect(input.value);
+    setLevelDirect(input.value);  // updateLevelDisplay() restores el content
   }
   input.addEventListener('blur', commit);
   input.addEventListener('keydown', e => {
     if (e.key === 'Enter')  { e.preventDefault(); input.blur(); }
-    if (e.key === 'Escape') { input.value = prev; input.blur(); }
+    if (e.key === 'Escape') { updateLevelDisplay(); }  // restore without saving
   });
 
-  span.replaceWith(input);
   input.focus();
   input.select();
 }
