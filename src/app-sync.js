@@ -125,28 +125,52 @@ var SYNC = (function () {
       var ref = _docRef();
       if (!ref) return;
 
+      // Read last signed-in UID to detect account switch
+      var lastUid = null;
+      try { lastUid = localStorage.getItem('kappa_last_uid'); } catch (e) {}
+      var isSameAccount = (lastUid === user.uid);
+
       // Download remote snapshot
       var snap   = await ref.get();
       var remote = snap.exists ? snap.data() : null;
 
-      // Read local progress
-      var local = null;
-      if (window.electronAPI) {
-        try { local = await window.electronAPI.loadProgress(); } catch (e) {}
+      var merged = null;
+
+      if (isSameAccount) {
+        // Same account — merge local + remote (safe to union progress sets)
+        var local = null;
+        if (window.electronAPI) {
+          try { local = await window.electronAPI.loadProgress(); } catch (e) {}
+        } else {
+          var raw = localStorage.getItem('kappa_v3');
+          try { local = raw ? JSON.parse(raw) : null; } catch (e) {}
+        }
+        merged = _merge(local, remote);
       } else {
-        var raw = localStorage.getItem('kappa_v3');
-        try { local = raw ? JSON.parse(raw) : null; } catch (e) {}
+        // Different account — use remote data only (don't bleed another account's progress)
+        merged = remote;
+        console.log('[Sync] Account switch detected — loading remote data only');
       }
 
-      // Merge and apply
-      var merged = _merge(local, remote);
       if (merged) {
         _applyToApp(merged);
-        // Write merged back to local storage and Firestore
         try { localStorage.setItem('kappa_v3', JSON.stringify(merged)); } catch (e) {}
+        try { localStorage.setItem('kappa_last_uid', user.uid); } catch (e) {}
         await _upload(merged);
       } else {
-        _setStatus('ok', '✓ No data yet');
+        // First time signing in — push local progress up to this new account
+        var local = null;
+        if (window.electronAPI) {
+          try { local = await window.electronAPI.loadProgress(); } catch (e) {}
+        } else {
+          var raw2 = localStorage.getItem('kappa_v3');
+          try { local = raw2 ? JSON.parse(raw2) : null; } catch (e) {}
+        }
+        if (local) {
+          try { localStorage.setItem('kappa_last_uid', user.uid); } catch (e) {}
+          await _upload(local);
+        }
+        _setStatus('ok', '✓ No cloud data yet');
       }
     } catch (e) {
       _setStatus('error', '✕ Sync error');
@@ -158,6 +182,7 @@ var SYNC = (function () {
     SYNC.isEnabled = false;
     SYNC.userId    = null;
     SYNC.userEmail = null;
+    try { localStorage.removeItem('kappa_last_uid'); } catch (e) {}
     _updateUI(false);
     _setStatus('idle', 'Not signed in');
   }

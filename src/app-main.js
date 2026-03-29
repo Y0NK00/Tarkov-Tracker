@@ -135,10 +135,58 @@ function adjustLevel(delta) {
   if (typeof questsRender === 'function') questsRender();
 }
 
+function setLevelDirect(val) {
+  const n = parseInt(val, 10);
+  if (isNaN(n)) return;
+  APP.progress.level = Math.max(1, Math.min(79, n));
+  APP.saveProgress();
+  updateLevelDisplay();
+  if (typeof questsRender === 'function') questsRender();
+}
+
+function _openLevelInput(el) {
+  if (el.querySelector('input')) return; // already open
+  const span = el.tagName === 'INPUT' ? el : el;
+  const prev = span.textContent;
+
+  const input = document.createElement('input');
+  input.type = 'number';
+  input.min = 1; input.max = 79;
+  input.value = APP.progress.level;
+  input.style.cssText =
+    'width:46px;background:var(--surface3);border:1px solid var(--gold);' +
+    'color:var(--gold);font-family:\'Share Tech Mono\',monospace;font-size:inherit;' +
+    'text-align:center;padding:0 2px;outline:none;-moz-appearance:textfield;';
+
+  function commit() {
+    setLevelDirect(input.value);
+  }
+  input.addEventListener('blur', commit);
+  input.addEventListener('keydown', e => {
+    if (e.key === 'Enter')  { e.preventDefault(); input.blur(); }
+    if (e.key === 'Escape') { input.value = prev; input.blur(); }
+  });
+
+  span.replaceWith(input);
+  input.focus();
+  input.select();
+}
+
 function updateLevelDisplay() {
-  document.getElementById('h-level').textContent = APP.progress.level;
+  const hlEl = document.getElementById('h-level');
+  if (hlEl) {
+    hlEl.textContent = APP.progress.level;
+    hlEl.title  = 'Click to set level';
+    hlEl.style.cursor = 'pointer';
+    hlEl.onclick = () => _openLevelInput(hlEl);
+  }
   const ld = document.getElementById('level-display');
-  if (ld) ld.textContent = APP.progress.level;
+  if (ld && ld.tagName !== 'INPUT') {
+    ld.textContent = APP.progress.level;
+    ld.title  = 'Click to set level';
+    ld.style.cursor = 'pointer';
+    ld.onclick = () => _openLevelInput(ld);
+  }
   // Mobile header level badge
   const mhLevel = document.getElementById('mh-level');
   if (mhLevel) mhLevel.textContent = 'LVL ' + APP.progress.level;
